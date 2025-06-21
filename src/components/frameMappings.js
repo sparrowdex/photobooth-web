@@ -1,7 +1,7 @@
 //used to map the photo frames to the captured image for all types of shots
 const frameMappings = {
   "1shot-design1": {
-    frame: "/designs/1shot-design1.png",
+    frame: "/photobooth-web/designs/1shot-design1.png",
     frameWidth: 487,
     frameHeight: 587,
     windows: [
@@ -9,7 +9,7 @@ const frameMappings = {
     ],
   },
   "1shot-design2": {
-    frame: "/designs/1shot-design2.png",
+    frame: "/photobooth-web/designs/1shot-design2.png",
     frameWidth: 500,
     frameHeight: 375,
     windows: [
@@ -17,7 +17,7 @@ const frameMappings = {
     ],
   },
   "1shot-design3": {
-    frame: "/designs/1shot-design3.png",
+    frame: "/photobooth-web/designs/1shot-design3.png",
     frameWidth: 400,
     frameHeight: 500,
     windows: [
@@ -25,7 +25,7 @@ const frameMappings = {
     ],
   },
   "1shot-design4": {
-    frame: "/designs/1shot-design4.png",
+    frame: "/photobooth-web/designs/1shot-design4.png",
     frameWidth: 500,
     frameHeight: 450,
     windows: [
@@ -33,7 +33,7 @@ const frameMappings = {
     ],
   },
   "1shot-design5": {
-    frame: "/designs/1shot-design5.png",
+    frame: "/photobooth-web/designs/1shot-design5.png",
     frameWidth: 600,
     frameHeight: 375,
     windows: [
@@ -41,7 +41,7 @@ const frameMappings = {
     ],
   },
   "1shot-design6": {
-    frame: "/designs/1shot-design6.png",
+    frame: "/photobooth-web/designs/1shot-design6.png",
     frameWidth: 510,
     frameHeight: 530,
     windows: [
@@ -50,7 +50,7 @@ const frameMappings = {
   },
 
   "3shot-design1": {
-    frame: "/designs/3shot-design1.png",
+    frame: "/photobooth-web/designs/3shot-design1.png",
     frameWidth: 450,
     frameHeight: 1000,
     windows: [
@@ -60,7 +60,7 @@ const frameMappings = {
     ],
   },
   "3shot-design2": {
-    frame: "/designs/3shot-design2.png",
+    frame: "/photobooth-web/designs/3shot-design2.png",
     frameWidth: 450,
     frameHeight: 1000,
     windows: [
@@ -70,7 +70,7 @@ const frameMappings = {
     ],
   },
   "3shot-design3": {
-    frame: "/designs/3shot-design3.png",
+    frame: "/photobooth-web/designs/3shot-design3.png",
     frameWidth: 496,
     frameHeight: 1200,
     windows: [
@@ -81,7 +81,7 @@ const frameMappings = {
   },
   
   "3shot-design4": {
-    frame: "/designs/3shot-design4.png",
+    frame: "/photobooth-web/designs/3shot-design4.png",
     frameWidth: 350,
     frameHeight: 1100,
     windows: [
@@ -91,7 +91,7 @@ const frameMappings = {
     ],
   },
   "4shot-design1": {
-    frame: "/designs/4shot-design1.png",
+    frame: "/photobooth-web/designs/4shot-design1.png",
     frameWidth: 525,
     frameHeight: 1259,
     windows: [
@@ -102,7 +102,7 @@ const frameMappings = {
     ],
   },
   "4shot-design3": {
-    frame: "/designs/4shot-design3.png",
+    frame: "/photobooth-web/designs/4shot-design3.png",
     frameWidth: 525,
     frameHeight: 1259,
     windows: [
@@ -113,7 +113,7 @@ const frameMappings = {
     ],
   },
   "6shot-design1": {
-    frame: "/designs/6shot-design1.png",
+    frame: "/photobooth-web/designs/6shot-design1.png",
     frameWidth: 525,
     frameHeight: 1000,
     windows: [
@@ -126,7 +126,7 @@ const frameMappings = {
     ],
   },
   "6shot-design2": {
-    frame: "/designs/6shot-design2.png",
+    frame: "/photobooth-web/designs/6shot-design2.png",
     frameWidth: 525,
     frameHeight: 1000,
     windows: [
