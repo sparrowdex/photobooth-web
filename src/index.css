@@ -1,0 +1,46 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Poppins', Arial, sans-serif;
+}
+.font-pacifico {
+  font-family: 'Pacifico', cursive;
+}
+
+.animated-pink-bg {
+  background: linear-gradient(120deg, #fce4ec, #f8bbd0, #f06292, #f8bbd0, #fce4ec);
+  background-size: 400% 400%;
+  animation: pinkGradient 12s ease-in-out infinite;
+}
+
+@keyframes pinkGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(40px) scale(0.95);}
+  to { opacity: 1; transform: translateY(0) scale(1);}
+}
+.animate-fadeInUp {
+  animation: fadeInUp 1s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(40px) scale(0.96) rotate(-3deg); }
+  to   { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+}
+@keyframes card-out {
+  from { opacity: 1; transform: translateY(0) scale(1) rotate(0deg);}
+  to   { opacity: 0; transform: translateY(-40px) scale(0.96) rotate(3deg);}
+}
+.card-enter {
+  animation: card-in 0.4s cubic-bezier(.4,0,.2,1);
+}
+.card-exit {
+  animation: card-out 0.4s cubic-bezier(.4,0,.2,1);
+}
