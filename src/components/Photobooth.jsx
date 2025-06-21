@@ -114,33 +114,30 @@ import NextButton from "./NextButton";
 //3 images do not fit the card, need to specify the two overlay per row thing, and as no of designs increases so does pagination 
 const designOverlaysByLayout = {
   1: [
-    { key: "1shot-design1", url: "/designs/1shot-design1.png" },
-    { key: "1shot-design2", url: "/designs/1shot-design2.png" },
-    { key: "1shot-design3", url: "/designs/1shot-design3.png" },
-    { key: "1shot-design4", url: "/designs/1shot-design4.png" },
-    { key: "1shot-design5", url: "/designs/1shot-design5.png" },
-    { key: "1shot-design6", url: "/designs/1shot-design6.png" },
+    { key: "1shot-design1", url: "/photobooth-web/designs/1shot-design1.png" },
+    { key: "1shot-design2", url: "/photobooth-web/designs/1shot-design2.png" },
+    { key: "1shot-design3", url: "/photobooth-web/designs/1shot-design3.png" },
+    { key: "1shot-design4", url: "/photobooth-web/designs/1shot-design4.png" },
+    { key: "1shot-design5", url: "/photobooth-web/designs/1shot-design5.png" },
+    { key: "1shot-design6", url: "/photobooth-web/designs/1shot-design6.png" },
   ],
   3: [
-    { key: "3shot-design1", url: "/designs/3shot-design1.png" },
-    { key: "3shot-design2", url: "/designs/3shot-design2.png" },
-    { key: "3shot-design3", url: "/designs/3shot-design3.png" },
-    { key: "3shot-design4", url: "/designs/3shot-design4.png" },
-    { key: "3shot-design5", url: "/designs/3shot-design5.png" },
+    { key: "3shot-design1", url: "/photobooth-web/designs/3shot-design1.png" },
+    { key: "3shot-design2", url: "/photobooth-web/designs/3shot-design2.png" },
+    { key: "3shot-design3", url: "/photobooth-web/designs/3shot-design3.png" },
+    { key: "3shot-design4", url: "/photobooth-web/designs/3shot-design4.png" },
+    
   ],
   4: [
-    { key: "4shot-design1", url: "/designs/4shot-design1.png" },
-    { key: "4shot-design2", url: "/designs/4shot-design2.png" },
-    { key: "4shot-design3", url: "/designs/4shot-design3.png" },
-    { key: "4shot-design4", url: "/designs/4shot-design4.png" },
-    { key: "4shot-design5", url: "/designs/4shot-design5.png" },
+    { key: "4shot-design1", url: "/photobooth-web/designs/4shot-design1.png" },
+    { key: "4shot-design2", url: "/photobooth-web/designs/4shot-design2.png" },
+    { key: "4shot-design3", url: "/photobooth-web/designs/4shot-design3.png" },
+   
   ],
   6: [
-    { key: "6shot-design1", url: "/designs/6shot-design1.png" },
-    { key: "6shot-design2", url: "/designs/6shot-design2.png" },
-    { key: "6shot-design3", url: "/designs/6shot-design3.png" },
-    { key: "6shot-design4", url: "/designs/6shot-design4.png" },
-    { key: "6shot-design5", url: "/designs/6shot-design5.png" },
+    { key: "6shot-design1", url: "/photobooth-web/designs/6shot-design1.png" },
+    { key: "6shot-design2", url: "/photobooth-web/designs/6shot-design2.png" },
+    
 
   ],
 };
