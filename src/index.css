@@ -44,3 +44,6 @@ body {
 .card-exit {
   animation: card-out 0.4s cubic-bezier(.4,0,.2,1);
 }
+body {
+  overflow-x: hidden;
+}

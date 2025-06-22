@@ -4,7 +4,6 @@
   "version": "0.0.0",
   "type": "module",
   "homepage": "https://sparrowdex.github.io/photobooth-web/",
-
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -12,10 +11,10 @@
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
-
   },
   "dependencies": {
     "@p5-wrapper/react": "^4.4.2",
+    "gifshot": "^0.4.5",
     "p5": "^2.0.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
