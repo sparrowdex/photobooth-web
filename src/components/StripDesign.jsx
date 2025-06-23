@@ -87,10 +87,10 @@
 // }
 
 // export default function StripDesign({ images, designs, onBack }) {
-//   const [step, setStep] = useState("filters"); // "filters" | "design"
+//   const [step, setStep] = useState("filters");
 //   const [photoFilters, setPhotoFilters] = useState(images.map(() => ""));
 //   const [selectedDesign, setSelectedDesign] = useState(designs[0] || null);
-//   const [cardAnim, setCardAnim] = useState("card-enter"); // For animation
+//   const [cardAnim, setCardAnim] = useState("card-enter");
 
 //   // Download logic with frame mapping support and cropping
 //   const handleDownload = async () => {
@@ -142,7 +142,6 @@
 //               ctx.closePath();
 //               ctx.clip();
 //             } else {
-//               // Rectangle clip
 //               ctx.beginPath();
 //               ctx.rect(win.left, win.top, win.width, win.height);
 //               ctx.closePath();
@@ -215,23 +214,24 @@
 //     document.body.removeChild(link);
 //   };
 
-//   // Card transition handler
 //   const goToStep = (nextStep) => {
 //     setCardAnim("card-exit");
 //     setTimeout(() => {
 //       setStep(nextStep);
 //       setCardAnim("card-enter");
-//     }, 400); // Match animation duration
+//     }, 400);
 //   };
 
 //   return (
-//     <div className="flex w-full h-full items-center justify-center gap-8 relative">
-//       <PhotoLayoutCard
-//         images={images}
-//         filters={photoFilters}
-//         selectedDesign={selectedDesign}
-//       />
-//       <div className="relative min-w-[340px] h-[540px] flex items-center">
+//     <div className="flex flex-col md:flex-row w-full min-h-screen items-center justify-center gap-4 md:gap-8 bg-gradient-to-br from-pink-300 via-purple-200 to-indigo-200 overflow-x-hidden">
+//       <div className="w-full max-w-md md:max-w-lg lg:max-w-xl mx-auto md:mx-0">
+//         <PhotoLayoutCard
+//           images={images}
+//           filters={photoFilters}
+//           selectedDesign={selectedDesign}
+//         />
+//       </div>
+//       <div className="relative w-full max-w-md md:max-w-sm h-auto flex items-center">
 //         <div className={`absolute inset-0 z-10 ${cardAnim}`}>
 //           {step === "filters" ? (
 //             <ControlsCard
@@ -492,7 +492,7 @@ export default function StripDesign({ images, designs, onBack }) {
   };
 
   return (
-    <div className="flex flex-col md:flex-row w-full min-h-screen items-center justify-center gap-4 md:gap-8 bg-gradient-to-br from-pink-300 via-purple-200 to-indigo-200 overflow-x-hidden">
+    <div className="flex flex-col md:flex-row w-full min-h-screen items-start justify-center gap-4 md:gap-8 bg-gradient-to-br from-pink-300 via-purple-200 to-indigo-200 overflow-x-hidden">
       <div className="w-full max-w-md md:max-w-lg lg:max-w-xl mx-auto md:mx-0">
         <PhotoLayoutCard
           images={images}

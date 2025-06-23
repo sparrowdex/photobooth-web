@@ -1,5 +1,7 @@
+
 import { useState } from "react";
 import BackButton from "./BackButton";
+import { FilterCarousel } from "./FilterCarousel"; // Import the carousel
 
 const FILTERS = [
   { name: "None", value: "" },
@@ -19,7 +21,6 @@ const FILTERS = [
   { name: "Invert", value: "invert(1)" },
 ];
 
-
 export default function ControlsCard({
   step,
   setStep,
@@ -38,47 +39,15 @@ export default function ControlsCard({
     return (
       <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center min-w-[340px]">
         <div className="text-xl font-bold text-pink-600 mb-4">Choose a Filter</div>
-        <div className="flex flex-wrap gap-3 justify-center mb-6">
-          {FILTERS.map((filter, idx) => (
-            <div key={filter.name} className="relative">
-              <button
-                className={`px-4 py-2 rounded-full font-semibold border-2 transition 
-                  ${activeFilter === idx ? "border-pink-500 bg-pink-100" : "border-pink-200 bg-pink-50"}
-                  hover:bg-pink-200`}
-                onClick={() => setActiveFilter(activeFilter === idx ? null : idx)}
-              >
-                {filter.name}
-              </button>
-              {activeFilter === idx && (
-                <div className="absolute left-0 z-20 mt-2 w-56 bg-white rounded-xl shadow-lg border border-pink-200">
-                  <div className="p-2 text-sm text-pink-700 font-semibold">Apply to:</div>
-                  {images.map((img, i) => (
-                    <button
-                      key={i}
-                      className={`flex items-center gap-2 w-full px-4 py-2 hover:bg-pink-50 rounded-lg transition
-                        ${filters[i] === filter.value ? "bg-pink-100 font-bold" : ""}
-                      `}
-                      onClick={() => {
-                        const newFilters = [...filters];
-                        newFilters[i] = filter.value;
-                        setFilters(newFilters);
-                        setActiveFilter(null);
-                      }}
-                    >
-                      <img
-                        src={img}
-                        alt={`Shot ${i + 1}`}
-                        className="w-10 h-10 object-cover rounded border"
-                        style={{ filter: filter.value }}
-                      />
-                      <span>Photo {i + 1}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        {/* PAGINATED FILTER BUTTONS */}
+        <FilterCarousel
+          filters={FILTERS}
+          activeFilter={activeFilter}
+          setActiveFilter={setActiveFilter}
+          images={images}
+          filtersState={filters}
+          setFilters={setFilters}
+        />
         <button
           className="mt-8 px-6 py-2 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-semibold shadow hover:from-pink-500 hover:to-pink-700 transition-all duration-200"
           onClick={() => setStep("design")}
