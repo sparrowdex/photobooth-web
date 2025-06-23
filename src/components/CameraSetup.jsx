@@ -741,9 +741,38 @@
 // }
 // smaller screen compatibility for camera doesnt work, introduced glass morphism effect on container.
 
+// 
 import React, { useRef, useState, useEffect } from "react";
 import { Camera } from "react-camera-pro";
 import BackButton from "./BackButton";
+
+// Helper hook for orientation detection
+function useLandscape() {
+  const getIsPortrait = () => {
+    if (window.screen.orientation && window.screen.orientation.type) {
+      return window.screen.orientation.type.startsWith("portrait");
+    }
+    // Fallback for browsers that don't support the API
+    return window.innerHeight > window.innerWidth;
+  };
+
+  const [isPortrait, setIsPortrait] = useState(getIsPortrait());
+
+  useEffect(() => {
+    function updateOrientation() {
+      setIsPortrait(getIsPortrait());
+    }
+    // Listen for orientation changes and resizes
+    window.addEventListener("orientationchange", updateOrientation);
+    window.addEventListener("resize", updateOrientation);
+    return () => {
+      window.removeEventListener("orientationchange", updateOrientation);
+      window.removeEventListener("resize", updateOrientation);
+    };
+  }, []);
+
+  return !isPortrait; // returns true if landscape
+}
 
 export default function CameraSetup({ layout, onBack, onDone }) {
   const shots = layout?.shots || 1;
@@ -753,23 +782,13 @@ export default function CameraSetup({ layout, onBack, onDone }) {
   const [showInstructions, setShowInstructions] = useState(false);
   const [countdown, setCountdown] = useState(null);
 
-  // Orientation prompt for mobile
-  const [isPortrait, setIsPortrait] = useState(window.innerHeight > window.innerWidth);
-  useEffect(() => {
-    const handleResize = () => setIsPortrait(window.innerHeight > window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("orientationchange", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("orientationchange", handleResize);
-    };
-  }, []);
+  // Use the improved orientation detection
+  const isLandscape = useLandscape();
 
   // Countdown logic
   useEffect(() => {
     if (countdown === null) return;
     if (countdown === 0) {
-      // Take photo after countdown
       setTimeout(() => {
         if (cameraRef.current) {
           const photo = cameraRef.current.takePhoto();
@@ -784,7 +803,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
           });
         }
         setCountdown(null);
-      }, 300); // slight delay for UX
+      }, 300);
       return;
     }
     const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
@@ -806,7 +825,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
   return (
     <div className="flex flex-col items-center relative min-h-screen bg-gradient-to-br from-pink-300 via-purple-200 to-indigo-200 overflow-x-hidden">
       {/* Orientation Prompt */}
-      {isPortrait && (
+      {!isLandscape && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80">
           <div className="text-white text-center text-2xl p-8 rounded-xl bg-pink-600 shadow-2xl">
             For the best experience,<br />
@@ -944,6 +963,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     </div>
   );
 }
+
 
 
 
