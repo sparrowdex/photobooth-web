@@ -741,149 +741,80 @@
 // }
 // smaller screen compatibility for camera doesnt work, introduced glass morphism effect on container.
 
-import { useRef, useState, useEffect } from "react";
-import { ReactP5Wrapper } from "@p5-wrapper/react";
+import React, { useRef, useState, useEffect } from "react";
+import { Camera } from "react-camera-pro";
 import BackButton from "./BackButton";
 
 export default function CameraSetup({ layout, onBack, onDone }) {
   const shots = layout?.shots || 1;
+  const cameraRef = useRef(null);
   const [captured, setCaptured] = useState([]);
   const [step, setStep] = useState("preview");
-  const [countdown, setCountdown] = useState(3);
   const [showInstructions, setShowInstructions] = useState(false);
-  const videoRef = useRef(null);
-  const countdownInterval = useRef(null);
-  const [previewSize, setPreviewSize] = useState({ width: 640, height: 480 });
+  const [countdown, setCountdown] = useState(null);
 
-  // Responsive preview sizing
+  // Orientation prompt for mobile
+  const [isPortrait, setIsPortrait] = useState(window.innerHeight > window.innerWidth);
   useEffect(() => {
-    function updatePreviewSize() {
-      const vw = Math.min(window.innerWidth, document.documentElement.clientWidth);
-      const width = Math.min(vw * 0.9, 640); // 90% of viewport width, max 640px
-      const height = Math.round(width * 3 / 4); // Maintain 4:3 aspect ratio
-      setPreviewSize({ width, height });
-    }
-    
-    updatePreviewSize();
-    window.addEventListener("resize", updatePreviewSize);
-    return () => window.removeEventListener("resize", updatePreviewSize);
-  }, []);
-
-  // Reset session when shot count changes
-  useEffect(() => {
-    startSession();
-    // eslint-disable-next-line
-  }, [shots]);
-
-  // Cleanup intervals on unmount
-  useEffect(() => {
+    const handleResize = () => setIsPortrait(window.innerHeight > window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleResize);
     return () => {
-      if (countdownInterval.current) {
-        clearInterval(countdownInterval.current);
-      }
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
     };
   }, []);
 
-  // p5 sketch function
-  const sketch = (p5) => {
-    let capture;
-    
-    p5.setup = () => {
-      p5.createCanvas(previewSize.width, previewSize.height);
-      capture = p5.createCapture(p5.VIDEO);
-      capture.size(640, 480); // Internal capture size remains 640x480
-      capture.hide();
-      videoRef.current = capture;
-    };
-
-    p5.draw = () => {
-      p5.background(0);
-      if (capture) {
-        // Draw video scaled to preview size
-        p5.image(capture, 0, 0, previewSize.width, previewSize.height);
-        
-        if (step === "countdown") {
-          p5.fill(255, 0, 0, 180);
-          p5.noStroke();
-          p5.ellipse(
-            previewSize.width / 2, 
-            previewSize.height / 2, 
-            120, 
-            120
-          );
-          p5.fill(255);
-          p5.textSize(64);
-          p5.textAlign(p5.CENTER, p5.CENTER);
-          p5.text(
-            countdown, 
-            previewSize.width / 2, 
-            previewSize.height / 2
-          );
+  // Countdown logic
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown === 0) {
+      // Take photo after countdown
+      setTimeout(() => {
+        if (cameraRef.current) {
+          const photo = cameraRef.current.takePhoto();
+          setCaptured((prev) => {
+            const next = [...prev, photo];
+            if (next.length < shots) {
+              setStep("preview");
+            } else {
+              setStep("done");
+            }
+            return next;
+          });
         }
-      }
-    };
-  };
-
-  // Reset session state
-  const startSession = () => {
-    setCaptured([]);
-    setStep("preview");
-    setCountdown(3);
-    if (countdownInterval.current) {
-      clearInterval(countdownInterval.current);
+        setCountdown(null);
+      }, 300); // slight delay for UX
+      return;
     }
-  };
-
-  // Start countdown for next shot
-  const startCountdown = () => {
-    setStep("countdown");
-    setCountdown(3);
-
-    let timer = 3;
-    if (countdownInterval.current) clearInterval(countdownInterval.current);
-    countdownInterval.current = setInterval(() => {
-      timer -= 1;
-      setCountdown(timer);
-      if (timer === 0) {
-        clearInterval(countdownInterval.current);
-        setTimeout(() => {
-          capturePhoto();
-        }, 300);
-      }
-    }, 1000);
-  };
-
-  // Capture photo and advance (always at 640x480)
-  const capturePhoto = () => {
-    setStep("capture");
-    const canvas = document.createElement("canvas");
-    canvas.width = 640;
-    canvas.height = 480;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(videoRef.current.elt, 0, 0, canvas.width, canvas.height);
-
-    setCaptured((prev) => {
-      const next = [...prev, canvas.toDataURL("image/png")];
-      if (next.length < shots) {
-        setTimeout(() => {
-          setStep("preview");
-          setTimeout(startCountdown, 300);
-        }, 700);
-      } else {
-        setTimeout(() => setStep("done"), 500);
-      }
-      return next;
-    });
-  };
+    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [countdown, shots]);
 
   // Start or retake session
   const handleStartOrRetake = () => {
-    startSession();
-    setTimeout(startCountdown, 500);
+    setCaptured([]);
+    setStep("preview");
+  };
+
+  // Handler to start countdown
+  const handleStartCountdown = () => {
+    setCountdown(3);
+    setStep("countdown");
   };
 
   return (
     <div className="flex flex-col items-center relative min-h-screen bg-gradient-to-br from-pink-300 via-purple-200 to-indigo-200 overflow-x-hidden">
+      {/* Orientation Prompt */}
+      {isPortrait && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80">
+          <div className="text-white text-center text-2xl p-8 rounded-xl bg-pink-600 shadow-2xl">
+            For the best experience,<br />
+            please rotate your device horizontally (landscape).
+          </div>
+        </div>
+      )}
+
       {/* Floating Help Circle */}
       {!showInstructions && (
         <div
@@ -939,27 +870,37 @@ export default function CameraSetup({ layout, onBack, onDone }) {
           ? "All Photos Captured!"
           : `Photo ${captured.length + 1} of ${shots}`}
       </div>
-      
-      {/* Responsive preview container */}
+      {/* Responsive Camera */}
       <div className="mb-4 w-full flex justify-center">
-        <div 
-          className="relative bg-black rounded-xl overflow-hidden"
-          style={{
-            width: `${previewSize.width}px`,
-            height: `${previewSize.height}px`
-          }}
-        >
-          <ReactP5Wrapper sketch={sketch} />
+        <div style={{ width: "100%", maxWidth: 640, position: "relative" }}>
+          <Camera
+            ref={cameraRef}
+            aspectRatio={4 / 3}
+            facingMode="user"
+            numberOfCamerasCallback={() => {}}
+            errorMessages={{
+              noCameraAccessible: "No camera device accessible.",
+              permissionDenied: "Permission denied. Please refresh and give camera permission.",
+              switchCamera: "Unable to switch camera.",
+              canvas: "Canvas is not supported."
+            }}
+          />
+          {/* Countdown Overlay */}
+          {step === "countdown" && countdown !== null && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 z-20">
+              <span className="text-white text-7xl font-bold drop-shadow-lg">{countdown}</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Only show "Start Photo Session" before the first photo */}
-      {step === "preview" && captured.length === 0 && (
+      {/* Only show "Take Photo" before all photos are taken */}
+      {step === "preview" && captured.length < shots && (
         <button
           className="px-8 py-4 bg-pink-500 text-white rounded-xl shadow hover:bg-pink-600 transition text-xl font-semibold"
-          onClick={handleStartOrRetake}
+          onClick={handleStartCountdown}
         >
-          Start Photo Session
+          Take Photo
         </button>
       )}
 
@@ -1003,6 +944,8 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     </div>
   );
 }
+
+
 
 
 

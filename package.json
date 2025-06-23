@@ -17,6 +17,7 @@
     "gifshot": "^0.4.5",
     "p5": "^2.0.3",
     "react": "^18.2.0",
+    "react-camera-pro": "^1.4.0",
     "react-dom": "^18.2.0",
     "react-p5": "^1.4.1",
     "react-webcam": "^7.2.0"
