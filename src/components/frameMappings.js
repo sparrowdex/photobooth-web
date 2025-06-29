@@ -48,6 +48,30 @@ const frameMappings = {
       { left: 100, top: 90, width: 300, height: 295, borderRadius: 100 }
     ],
   },
+  "1shot-design7": {
+    frame: "/photobooth-web/designs/1shot-design7.png",
+    frameWidth: 500,
+    frameHeight: 500,
+    windows: [
+      { left: 50, top: 50, width: 400, height: 400, borderRadius: 24 }
+    ],
+  },
+  "1shot-design8": {
+    frame: "/photobooth-web/designs/1shot-design8.png",
+    frameWidth: 500,
+    frameHeight: 500,
+    windows: [
+      { left: 50, top: 50, width: 400, height: 400, borderRadius: 24 }
+    ],
+  },
+  "1shot-design9": {
+    frame: "/photobooth-web/designs/1shot-design9.png",
+    frameWidth: 500,
+    frameHeight: 500,
+    windows: [
+      { left: 50, top: 50, width: 400, height: 400, borderRadius: 24 }
+    ],
+  },
 
   "3shot-design1": {
     frame: "/photobooth-web/designs/3shot-design1.png",
@@ -90,6 +114,16 @@ const frameMappings = {
       { left: 30, top: 680, width: 300, height: 330, borderRadius: 10 },
     ],
   },
+  "3shot-design5": {
+    frame: "/photobooth-web/designs/3shot-design5.png",
+    frameWidth: 450,
+    frameHeight: 1000,
+    windows: [
+      { left: 65, top: 10, width: 317, height: 290, borderRadius: 24 },
+      { left: 65, top: 340, width: 317, height: 290, borderRadius: 24 },
+      { left: 65, top: 677, width: 317, height: 290, borderRadius: 24 },
+    ],
+  },
   "4shot-design1": {
     frame: "/photobooth-web/designs/4shot-design1.png",
     frameWidth: 525,
@@ -101,6 +135,17 @@ const frameMappings = {
       { left: 70, top: 645, width: 383, height: 290, borderRadius: 24 }, //3rd picture
     ],
   },
+  "4shot-design2": {
+    frame: "/photobooth-web/designs/4shot-design2.png",
+    frameWidth: 535,
+    frameHeight: 1270,
+    windows: [
+      { left: 70, top: 35, width: 383, height: 295, borderRadius: 24 },
+      { left: 70, top: 330, width: 383, height: 290, borderRadius: 24 },
+      { left: 70, top: 930, width: 383, height: 290, borderRadius: 24 },
+      { left: 70, top: 645, width: 383, height: 290, borderRadius: 24 },
+    ],
+  },
   "4shot-design3": {
     frame: "/photobooth-web/designs/4shot-design3.png",
     frameWidth: 525,
@@ -110,6 +155,28 @@ const frameMappings = {
       { left: 50, top: 290, width: 418, height: 290, borderRadius: 24 },
       { left: 50, top: 810, width: 418, height: 290, borderRadius: 24 },//4th picture
       { left: 50, top: 555, width: 418, height: 290, borderRadius: 24 }, //3rd picture
+    ],
+  },
+  "4shot-design4": {
+    frame: "/photobooth-web/designs/4shot-design4.png",
+    frameWidth: 615,
+    frameHeight: 1275,
+    windows: [
+      { left: 108, top: 100, width: 383, height: 285, borderRadius: 24 },
+      { left: 108, top: 383, width: 383, height: 270, borderRadius: 24 },
+      { left: 108, top: 930, width: 383, height: 270, borderRadius: 24 },
+      { left: 108, top: 645, width: 383, height: 280, borderRadius: 24 },
+    ],
+  },
+  "4shot-design5": {
+    frame: "/photobooth-web/designs/4shot-design5.png",
+    frameWidth: 525,
+    frameHeight: 1259,
+    windows: [
+      { left: 70, top: 25, width: 383, height: 290, borderRadius: 24 },
+      { left: 70, top: 330, width: 383, height: 290, borderRadius: 24 },
+      { left: 70, top: 930, width: 383, height: 290, borderRadius: 24 },
+      { left: 70, top: 645, width: 383, height: 290, borderRadius: 24 },
     ],
   },
   "6shot-design1": {
@@ -138,6 +205,32 @@ const frameMappings = {
       { left: 270, top: 677, width: 250, height: 290, borderRadius: 24 },
     ],
   },
+  "6shot-design3": {
+    frame: "/photobooth-web/designs/6shot-design3.png",
+    frameWidth: 525,
+    frameHeight: 1100,
+    windows: [
+      { left: 10, top: 10, width: 230, height: 280, borderRadius: 10 },
+      { left: 10, top: 340, width: 230, height: 297, borderRadius: 10 },
+      { left: 10, top: 677, width: 230, height: 305, borderRadius: 10 },
+      { left: 277, top: 10, width: 230, height: 290, borderRadius: 10 },
+      { left: 277, top: 340, width: 230, height: 305, borderRadius: 10 },
+      { left: 270, top: 677, width: 230, height: 300, borderRadius: 10 },
+    ],
+  },
+  // "6shot-design4": {
+  //   frame: "/photobooth-web/designs/6shot-design4.png",
+  //   frameWidth: 525,
+  //   frameHeight: 1000,
+  //   windows: [
+  //     { left: 10, top: 10, width: 230, height: 290, borderRadius: 24 },
+  //     { left: 10, top: 340, width: 230, height: 290, borderRadius: 24 },
+  //     { left: 10, top: 677, width: 230, height: 290, borderRadius: 24 },
+  //     { left: 280, top: 10, width: 230, height: 290, borderRadius: 24 },
+  //     { left: 280, top: 340, width: 230, height: 290, borderRadius: 24 },
+  //     { left: 280, top: 677, width: 230, height: 290, borderRadius: 24 },
+  //   ],
+  // },
   // Add more mappings as needed
   //when you want to check if images are aligned properly set borderRadius:71
 };

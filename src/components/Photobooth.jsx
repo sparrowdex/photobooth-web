@@ -17,23 +17,32 @@ const designOverlaysByLayout = {
     { key: "1shot-design4", url: "/photobooth-web/designs/1shot-design4.png" },
     { key: "1shot-design5", url: "/photobooth-web/designs/1shot-design5.png" },
     { key: "1shot-design6", url: "/photobooth-web/designs/1shot-design6.png" },
+    { key: "1shot-design7", url: "/photobooth-web/designs/1shot-design7.png" },
+    { key: "1shot-design8", url: "/photobooth-web/designs/1shot-design8.png" },
+    { key: "1shot-design9", url: "/photobooth-web/designs/1shot-design9.png" },
+
   ],
   3: [
     { key: "3shot-design1", url: "/photobooth-web/designs/3shot-design1.png" },
     { key: "3shot-design2", url: "/photobooth-web/designs/3shot-design2.png" },
     { key: "3shot-design3", url: "/photobooth-web/designs/3shot-design3.png" },
     { key: "3shot-design4", url: "/photobooth-web/designs/3shot-design4.png" },
+    { key: "3shot-design5", url: "/photobooth-web/designs/3shot-design5.png" },
     
   ],
   4: [
     { key: "4shot-design1", url: "/photobooth-web/designs/4shot-design1.png" },
     { key: "4shot-design2", url: "/photobooth-web/designs/4shot-design2.png" },
     { key: "4shot-design3", url: "/photobooth-web/designs/4shot-design3.png" },
+    { key: "4shot-design4", url: "/photobooth-web/designs/4shot-design4.png" },
+    { key: "4shot-design5", url: "/photobooth-web/designs/4shot-design5.png" },
    
   ],
   6: [
     { key: "6shot-design1", url: "/photobooth-web/designs/6shot-design1.png" },
     { key: "6shot-design2", url: "/photobooth-web/designs/6shot-design2.png" },
+    { key: "6shot-design3", url: "/photobooth-web/designs/6shot-design3.png" },
+    { key: "6shot-design4", url: "/photobooth-web/designs/6shot-design4.png" }
     
 
   ],
