@@ -50,10 +50,10 @@ const frameMappings = {
   },
   "1shot-design7": {
     frame: "/photobooth-web/designs/1shot-design7.png",
-    frameWidth: 500,
-    frameHeight: 500,
+    frameWidth: 550,
+    frameHeight: 350,
     windows: [
-      { left: 50, top: 50, width: 400, height: 400, borderRadius: 24 }
+      { left: 38, top: 50, width: 250, height: 270, borderRadius: 0 }
     ],
   },
   "1shot-design8": {
@@ -61,15 +61,15 @@ const frameMappings = {
     frameWidth: 500,
     frameHeight: 500,
     windows: [
-      { left: 50, top: 50, width: 400, height: 400, borderRadius: 24 }
+      { left: 50, top: 140, width: 300, height: 230, borderRadius: 24 }
     ],
   },
   "1shot-design9": {
     frame: "/photobooth-web/designs/1shot-design9.png",
     frameWidth: 500,
-    frameHeight: 500,
+    frameHeight: 630,
     windows: [
-      { left: 50, top: 50, width: 400, height: 400, borderRadius: 24 }
+      { left: 40, top: 48, width: 420, height: 435, borderRadius: 0 }
     ],
   },
 
@@ -119,9 +119,9 @@ const frameMappings = {
     frameWidth: 450,
     frameHeight: 1000,
     windows: [
-      { left: 65, top: 10, width: 317, height: 290, borderRadius: 24 },
-      { left: 65, top: 340, width: 317, height: 290, borderRadius: 24 },
-      { left: 65, top: 677, width: 317, height: 290, borderRadius: 24 },
+      { left: 45, top: 30, width: 350, height: 290, borderRadius: 0 },
+      { left: 45, top: 345, width: 350, height: 290, borderRadius: 0 },
+      { left: 45, top: 667, width: 350, height: 290, borderRadius: 0 },
     ],
   },
   "4shot-design1": {
@@ -137,13 +137,13 @@ const frameMappings = {
   },
   "4shot-design2": {
     frame: "/photobooth-web/designs/4shot-design2.png",
-    frameWidth: 535,
+    frameWidth: 720,
     frameHeight: 1270,
     windows: [
-      { left: 70, top: 35, width: 383, height: 295, borderRadius: 24 },
-      { left: 70, top: 330, width: 383, height: 290, borderRadius: 24 },
-      { left: 70, top: 930, width: 383, height: 290, borderRadius: 24 },
-      { left: 70, top: 645, width: 383, height: 290, borderRadius: 24 },
+      { left: 210, top: 38, width: 383, height: 295, borderRadius: 0 },
+      { left: 210, top: 330, width: 383, height: 293, borderRadius: 0 },
+      { left: 210, top: 930, width: 383, height: 290, borderRadius: 0 },
+      { left: 210, top: 645, width: 383, height: 290, borderRadius: 0 },
     ],
   },
   "4shot-design3": {
