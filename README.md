@@ -121,6 +121,7 @@ photobooth/
 - Retake option for multiple attempts
 
 ### 4. **Design Selection**
+- Multiple available filters mimicked through the help of Tailwind CSS
 - Browse through available design templates
 - Paginated interface (2 designs per page)
 - Visual preview of selected design
@@ -131,6 +132,7 @@ photobooth/
 - Automatic photo positioning using frame mappings
 - High-quality PNG output
 - Direct download to device
+- GIF download [not yet added]
 
 ## 🛠️ Technical Details
 
@@ -138,7 +140,7 @@ photobooth/
 - **React 18** - Modern React with hooks
 - **Vite** - Fast build tool and dev server
 - **p5.js** - Creative coding library for camera handling
-- **Tailwind CSS** - Utility-first CSS framework
+- **Tailwind CSS** - Utility-first CSS framework [newer version without Post CSS plug-in breaks on windows, revert to stable versions]
 - **React Camera Pro** - Advanced camera integration
 
 ### **Key Dependencies**
@@ -187,6 +189,8 @@ npm run deploy
 ```
 
 This will build the project and deploy it to the configured GitHub Pages URL.
+
+(After committing and pushing the changes to main , do npm run build and then the deploy command)
 
 ## 📱 Browser Compatibility
 
