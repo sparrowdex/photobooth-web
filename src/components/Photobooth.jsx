@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import StripLayoutSelection from "./StripLayoutSelection";
 import CameraSetup from "./CameraSetup";
@@ -103,7 +102,8 @@ export default function Photobooth({ onBack }) {
     return (
       <AppLayout>
         <StripDesign
-          images={capturedImages}
+          images={capturedImages.map(c => c.photo)}
+          captured={capturedImages}
           designs={designOverlays}
           selectedDesign={selectedDesign}
           onSelectDesign={setSelectedDesign}
