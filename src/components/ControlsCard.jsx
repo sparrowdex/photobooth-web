@@ -10,8 +10,8 @@ const FILTERS = [
   { name: "Glam", value: "brightness(1.2) contrast(1.1) blur(1px)" },
   { name: "Pencil Sketch", value: "grayscale(1) contrast(2) brightness(1.2)" },
   { name: "Extra Sharp", value: "contrast(1.5) brightness(1.1)" },
-  { name: "Warm", value: "sepia(0.4) brightness(1.1)" },
-  { name: "Cool", value: "hue-rotate(180deg) saturate(0.8) brightness(1.1)" },
+  { name: "Warm", value: "sepia(0.2) hue-rotate(5deg) brightness(1.1)" },
+  { name: "Cool", value: "hue-rotate(25deg) saturate(1.1) brightness(1.05)" },
   { name: "Faded", value: "contrast(0.8) brightness(1.1) saturate(0.7)" },
   { name: "Black & White", value: "grayscale(1)" },
   { name: "Sepia", value: "sepia(1)" },
@@ -102,3 +102,5 @@ export default function ControlsCard({
     );
   }
 }
+
+// I want the filters to mimic their real use, like the cool effect just make the image hues of blue, that shouldn't happen, also is it possible to center the card accordingly to the frame layout bceause for 3 , 4 and 6 shot, the frames are quite large making the controls card look small

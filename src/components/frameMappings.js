@@ -42,10 +42,10 @@ const frameMappings = {
   },
   "1shot-design6": {
     frame: "/photobooth-web/designs/1shot-design6.png",
-    frameWidth: 510,
-    frameHeight: 530,
+    frameWidth: 530,
+    frameHeight: 535,
     windows: [
-      { left: 100, top: 90, width: 300, height: 295, borderRadius: 100 }
+      { left: 115, top: 100, width: 300, height: 305, borderRadius: 120 }
     ],
   },
   "1shot-design7": {
@@ -78,9 +78,9 @@ const frameMappings = {
     frameWidth: 450,
     frameHeight: 1000,
     windows: [
-      { left: 65, top: 10, width: 317, height: 290, borderRadius: 24 },
-      { left: 65, top: 340, width: 317, height: 290, borderRadius: 24 },
-      { left: 65, top: 677, width: 317, height: 290, borderRadius: 24 },
+      { left: 65, top: 10, width: 317, height: 280, borderRadius: 24 },
+      { left: 65, top: 345, width: 317, height: 280, borderRadius: 24 },
+      { left: 65, top: 680, width: 317, height: 280, borderRadius: 24 },
     ],
   },
   "3shot-design2": {
@@ -88,7 +88,7 @@ const frameMappings = {
     frameWidth: 450,
     frameHeight: 1000,
     windows: [
-      { left: 40, top: 10, width: 370, height: 330, borderRadius: 24 },
+      { left: 40, top: 10, width: 370, height: 330, borderRadius: 0 },
       { left: 40, top: 335, width: 370, height: 330, borderRadius: 24 },
       { left: 40, top: 657, width: 370, height: 340, borderRadius: 24 },
     ],
@@ -129,21 +129,21 @@ const frameMappings = {
     frameWidth: 525,
     frameHeight: 1259,
     windows: [
-      { left: 70, top: 25, width: 383, height: 290, borderRadius: 24 },
-      { left: 70, top: 330, width: 383, height: 290, borderRadius: 24 },
-      { left: 70, top: 930, width: 383, height: 290, borderRadius: 24 },//4th picture
-      { left: 70, top: 645, width: 383, height: 290, borderRadius: 24 }, //3rd picture
+      { left: 75, top: 25, width: 378, height: 290, borderRadius: 24 },
+      { left: 75, top: 330, width: 378, height: 290, borderRadius: 24 },
+      { left: 75, top: 934, width: 378, height: 290, borderRadius: 24 },//4th picture
+      { left: 75, top: 640, width: 378, height: 290, borderRadius: 24 }, //3rd picture
     ],
   },
   "4shot-design2": {
     frame: "/photobooth-web/designs/4shot-design2.png",
-    frameWidth: 720,
-    frameHeight: 1270,
+    frameWidth: 500,
+    frameHeight: 1200,
     windows: [
-      { left: 210, top: 38, width: 383, height: 295, borderRadius: 0 },
-      { left: 210, top: 330, width: 383, height: 293, borderRadius: 0 },
-      { left: 210, top: 930, width: 383, height: 290, borderRadius: 0 },
-      { left: 210, top: 645, width: 383, height: 290, borderRadius: 0 },
+      { left: 109, top: 10, width: 383, height: 295, borderRadius: 0 },
+      { left: 109, top: 325, width: 383, height: 293, borderRadius: 0 },
+      { left: 109, top: 915, width: 383, height: 285, borderRadius: 0 },
+      { left: 109, top: 620, width: 383, height: 290, borderRadius: 0 },
     ],
   },
   "4shot-design3": {
@@ -159,13 +159,13 @@ const frameMappings = {
   },
   "4shot-design4": {
     frame: "/photobooth-web/designs/4shot-design4.png",
-    frameWidth: 615,
-    frameHeight: 1275,
+    frameWidth: 500,
+    frameHeight: 1200,
     windows: [
-      { left: 108, top: 100, width: 383, height: 285, borderRadius: 24 },
-      { left: 108, top: 383, width: 383, height: 270, borderRadius: 24 },
-      { left: 108, top: 930, width: 383, height: 270, borderRadius: 24 },
-      { left: 108, top: 645, width: 383, height: 280, borderRadius: 24 },
+      { left: 70, top: 62, width: 350, height: 285, borderRadius: 24 },
+      { left: 70, top: 345, width: 350, height: 270, borderRadius: 24 },
+      { left: 70, top: 910, width: 350, height: 270, borderRadius: 24 },
+      { left: 70, top: 630, width: 350, height: 280, borderRadius: 24 },
     ],
   },
   "4shot-design5": {

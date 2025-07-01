@@ -1002,8 +1002,22 @@ export default function CameraSetup({ layout, onBack, onDone }) {
   const [step, setStep] = useState("start"); // 'start', 'preview', 'countdown', 'done'
   const [showInstructions, setShowInstructions] = useState(false);
   const [countdown, setCountdown] = useState(null);
+  const [cameraSize, setCameraSize] = useState({ width: 640, height: 480 });
 
   const isLandscape = useLandscape();
+
+  // Set camera size on mount and resize
+  useEffect(() => {
+    const updateCameraSize = () => {
+      const width = Math.min(window.innerWidth * 0.95, 640);
+      const height = Math.round(width * 0.75); // 4:3 aspect ratio
+      setCameraSize({ width, height });
+    };
+    
+    updateCameraSize();
+    window.addEventListener('resize', updateCameraSize);
+    return () => window.removeEventListener('resize', updateCameraSize);
+  }, []);
 
   // Countdown logic
   useEffect(() => {
@@ -1136,9 +1150,18 @@ export default function CameraSetup({ layout, onBack, onDone }) {
             : `Photo ${captured.length + 1} of ${shots}`}
       </div>
 
-      {/* Camera Container - transparent */}
-      <div className="mb-4 w-full flex justify-center bg-transparent" style={{ maxWidth: 640 }}>
-        <div style={{ width: "100%", maxWidth: 640, position: "relative", background: "transparent" }}>
+      {/* Camera Container - fixed size to prevent shrinking */}
+      <div className="mb-4 flex justify-center">
+        <div 
+          style={{ 
+            width: cameraSize.width,
+            height: cameraSize.height,
+            position: "relative", 
+            background: "transparent",
+            borderRadius: "12px",
+            overflow: "hidden"
+          }}
+        >
           <Camera
             ref={cameraRef}
             aspectRatio={4 / 3}
