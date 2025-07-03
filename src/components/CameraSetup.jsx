@@ -1,7 +1,7 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Camera } from "react-camera-pro";
 import BackButton from "./BackButton";
-import gifshot from "gifshot";
+import { useTheme } from "./ThemeContext";
 
 // Orientation detection using Screen Orientation API (with fallback)
 function useLandscape() {
@@ -30,6 +30,7 @@ function useLandscape() {
 }
 
 export default function CameraSetup({ layout, onBack, onDone }) {
+  const { colors, isDarkMode } = useTheme();
   const shots = layout?.shots || 1;
   const cameraRef = useRef(null);
   const [captured, setCaptured] = useState([]);
@@ -56,51 +57,66 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     return () => window.removeEventListener('resize', updateCameraSize);
   }, []);
 
-  // Start recording video for GIF
-  const startRecording = () => {
-    setRecordedChunks([]); // Reset chunks for each shot
-    const video = document.querySelector("video");
-    if (!video) return;
-    const stream = video.captureStream();
-    const recorder = new window.MediaRecorder(stream, { mimeType: "video/webm" });
-    let chunks = [];
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) chunks.push(e.data);
-    };
-    recorder.onstop = () => {
-      setRecordedChunks(chunks);
-    };
-    recorder.start();
-    setMediaRecorder(recorder);
-    setIsRecording(true);
-  };
-
-  // Stop recording and convert to GIF
-  const stopRecordingAndGetGif = async () => {
-    if (!mediaRecorder) return { gif: null, videoBlob: null };
-    return new Promise((resolve) => {
+  const startRecording = useCallback(async () => {
+    if (!cameraRef.current) return;
+    
+    setRecordedChunks([]);
+    const stream = cameraRef.current.takePhotoStream();
+    if (!stream) return;
+    
+    try {
+      const options = { mimeType: 'video/webm;codecs=vp9' };
+      const mediaRecorder = new MediaRecorder(stream, options);
+      let chunks = [];
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+      
       mediaRecorder.onstop = async () => {
-        setIsRecording(false);
-        const videoBlob = new Blob(recordedChunks, { type: "video/webm" });
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        
+        // Dynamically import gifshot
+        const gifshot = (await import('gifshot')).default;
+        
         gifshot.createGIF({
-          video: [URL.createObjectURL(videoBlob)],
-          gifWidth: 320,
-          gifHeight: 240,
-          numFrames: 10,
-          frameDuration: 0.2,
-          progressCallback: () => {},
+          video: [url],
+          gifWidth: 640,
+          gifHeight: 480,
+          frameDuration: 0.1,
+          progressCallback: function(progress) {
+            console.log('GIF creation progress:', progress);
+          }
         }, function(obj) {
           if (!obj.error) {
-            resolve({ gif: obj.image, videoBlob });
+            setCaptured((prev) => {
+              const updated = [...prev, { photo: cameraRef.current.takePhoto(), gif: obj.image }];
+              return updated;
+            });
+            if (mediaRecorder) {
+              mediaRecorder.stop();
+            }
+            if (captured.length + 1 < shots) {
+              setStep("preview");
+            } else {
+              setStep("done");
+            }
           } else {
-            resolve({ gif: null, videoBlob });
+            console.error('GIF creation error:', obj.error);
           }
+          URL.revokeObjectURL(url);
         });
       };
-      mediaRecorder.stop();
-      setMediaRecorder(null); // Reset MediaRecorder for next shot
-    });
-  };
+      
+      mediaRecorder.start();
+      setMediaRecorder(mediaRecorder);
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+    }
+  }, [shots, cameraRef, setCaptured, setStep]);
 
   // Countdown logic
   useEffect(() => {
@@ -117,11 +133,16 @@ export default function CameraSetup({ layout, onBack, onDone }) {
         recorder.ondataavailable = (e) => {
           if (e.data.size > 0) chunks.push(e.data);
         };
-        recorder.onstop = () => {
+        recorder.onstop = async () => {
           // Create GIF from video
           const videoBlob = new Blob(chunks, { type: "video/webm" });
+          const url = URL.createObjectURL(videoBlob);
+          
+          // Dynamically import gifshot
+          const gifshot = (await import('gifshot')).default;
+          
           gifshot.createGIF({
-            video: [URL.createObjectURL(videoBlob)],
+            video: [url],
             gifWidth: 320,
             gifHeight: 240,
             numFrames: 10,
@@ -135,6 +156,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
               }
               return updated;
             });
+            URL.revokeObjectURL(url);
           });
         };
         recorder.start();
@@ -186,7 +208,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
       {/* Orientation Prompt */}
       {!isLandscape && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80">
-          <div className="flex flex-col items-center text-white text-center text-2xl p-8 rounded-xl bg-pink-600 shadow-2xl">
+          <div className={`flex flex-col items-center text-white text-center text-2xl p-8 rounded-xl ${colors.button} shadow-2xl`}>
             <svg
               width="48"
               height="48"
@@ -202,7 +224,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
             <span>
               <b>Rotate your device to landscape (horizontal) mode</b><br />
               for the best photobooth experience.<br /><br />
-              <span className="text-base text-pink-100 font-normal">
+              <span className={`text-base ${isDarkMode ? 'text-blue-100' : 'text-pink-100'} font-normal`}>
                 This app is designed for wide screens.<br />
                 Please turn your phone or tablet sideways.
               </span>
@@ -219,7 +241,9 @@ export default function CameraSetup({ layout, onBack, onDone }) {
           style={{
             width: 60,
             height: 60,
-            background: 'radial-gradient(circle at 30% 30%, #f472b6, #a21caf)',
+            background: isDarkMode 
+              ? 'radial-gradient(circle at 30% 30%, #3b82f6, #1d4ed8)' 
+              : 'radial-gradient(circle at 30% 30%, #f472b6, #a21caf)',
             borderRadius: '50%',
             boxShadow: '0 4px 24px rgba(0,0,0,0.2)',
             display: 'flex',
@@ -240,13 +264,13 @@ export default function CameraSetup({ layout, onBack, onDone }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative animate-fade-in">
             <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-pink-500 text-2xl"
+              className={`absolute top-4 right-4 text-gray-400 hover:${colors.primaryHover} text-2xl`}
               onClick={() => setShowInstructions(false)}
               aria-label="Close"
             >
               &times;
             </button>
-            <h2 className="text-2xl font-bold mb-4 text-pink-600">How to Use the Photobooth</h2>
+            <h2 className={`text-2xl font-bold mb-4 ${colors.text}`}>How to Use the Photobooth</h2>
             <ul className="list-disc pl-6 space-y-2 text-gray-700">
               <li>Click <b>Start Photo Session</b> to begin.</li>
               <li>Follow the countdown and pose for each shot.</li>
@@ -305,7 +329,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
       {/* Start Photo Session button */}
       {step === "start" && (
         <button
-          className="px-8 py-4 bg-pink-500 text-white rounded-xl shadow hover:bg-pink-600 transition text-xl font-semibold"
+          className={`px-8 py-4 ${colors.button} text-white rounded-xl shadow transition text-xl font-semibold`}
           onClick={handleStartSession}
         >
           Start Photo Session
@@ -315,7 +339,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
       {/* Take Photo button for each shot */}
       {step === "preview" && captured.length < shots && (
         <button
-          className="px-8 py-4 bg-pink-500 text-white rounded-xl shadow hover:bg-pink-600 transition text-xl font-semibold"
+          className={`px-8 py-4 ${colors.button} text-white rounded-xl shadow transition text-xl font-semibold`}
           onClick={handleStartCountdown}
         >
           Take Photo
@@ -345,7 +369,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
           ) : (
             <div
               key={i}
-              className="w-24 h-32 rounded-lg border-2 border-pink-300 flex items-center justify-center text-pink-300 text-3xl bg-transparent"
+              className={`w-24 h-32 rounded-lg border-2 ${colors.borderLight} flex items-center justify-center ${colors.textSecondary} text-3xl bg-transparent`}
               style={{ background: "transparent" }}
             >
               {i + 1}
@@ -358,13 +382,13 @@ export default function CameraSetup({ layout, onBack, onDone }) {
       {step === "done" && (
         <div className="flex gap-4 mt-8">
           <button
-            className="px-8 py-4 bg-pink-500 text-white rounded-xl shadow hover:bg-pink-600 transition text-xl font-semibold"
+            className={`px-8 py-4 ${colors.button} text-white rounded-xl shadow transition text-xl font-semibold`}
             onClick={handleStartOrRetake}
           >
             Retake
           </button>
           <button
-            className="px-8 py-4 bg-pink-500 text-white rounded-xl shadow hover:bg-pink-600 transition text-xl font-semibold"
+            className={`px-8 py-4 ${colors.button} text-white rounded-xl shadow transition text-xl font-semibold`}
             onClick={() => onDone(captured)}
           >
             Choose Strip Design

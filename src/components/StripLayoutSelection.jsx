@@ -31,7 +31,10 @@
 //   );
 // }
 
+import { useTheme } from "./ThemeContext";
+
 export default function StripLayoutSelection({ onSelectLayout }) {
+  const { colors } = useTheme();
   const layouts = [
     { id: 1, label: "1 Shot", img: "/photobooth-web/images/strip-1.png", shots: 1 },
     { id: 3, label: "3 Shot", img: "/photobooth-web/images/strip-3.png", shots: 3 },
@@ -41,7 +44,7 @@ export default function StripLayoutSelection({ onSelectLayout }) {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center w-full px-2">
-      <h2 className="text-2xl sm:text-3xl font-bold mb-8 text-pink-600 text-center">
+      <h2 className={`text-2xl sm:text-3xl font-bold mb-8 ${colors.text} text-center`}>
         Choose Your Strip Layout
       </h2>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8 w-full max-w-4xl">
@@ -49,7 +52,7 @@ export default function StripLayoutSelection({ onSelectLayout }) {
           <button
             key={layout.id}
             onClick={() => onSelectLayout(layout)}
-            className="bg-white rounded-2xl shadow-xl flex flex-col items-center p-4 sm:p-6 w-full h-56 sm:h-72 transition-transform hover:scale-105 hover:shadow-2xl focus:outline-none"
+            className={`${colors.card} rounded-2xl shadow-xl flex flex-col items-center p-4 sm:p-6 w-full h-56 sm:h-72 transition-transform hover:scale-105 hover:shadow-2xl focus:outline-none`}
           >
             <div className="w-full h-28 sm:h-40 flex items-center justify-center mb-4">
               <img
@@ -58,7 +61,7 @@ export default function StripLayoutSelection({ onSelectLayout }) {
                 className="object-contain h-full"
               />
             </div>
-            <span className="mt-auto text-base sm:text-lg font-semibold text-pink-500">{layout.label}</span>
+            <span className={`mt-auto text-base sm:text-lg font-semibold ${colors.text}`}>{layout.label}</span>
           </button>
         ))}
       </div>

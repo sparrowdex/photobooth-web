@@ -2,10 +2,10 @@
 const frameMappings = {
   "1shot-design1": {
     frame: "/photobooth-web/designs/1shot-design1.png",
-    frameWidth: 487,
-    frameHeight: 587,
+    frameWidth: 350,
+    frameHeight: 430,
     windows: [
-      { left: 95, top: 100, width: 300, height: 315, borderRadius: 24 }
+      { left: 20, top: 25, width: 310, height: 320, borderRadius: 0 }
     ],
   },
   "1shot-design2": {

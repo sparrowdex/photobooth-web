@@ -1,14 +1,16 @@
 
 import frameMappings from "./frameMappings";
 import FrameLayout from "./FrameLayout";
+import { useTheme } from "./ThemeContext";
 
 export default function PhotoLayoutCard({ images, filters, selectedDesign }) {
+  const { colors } = useTheme();
   const mappingKey = selectedDesign?.key;
   const mapping = mappingKey ? frameMappings[mappingKey] : null;
 
   if (mapping) {
     return (
-      <div className="bg-white rounded-2xl shadow-2xl p-6 flex flex-col items-center">
+      <div className={`${colors.card} rounded-2xl shadow-2xl p-6 flex flex-col items-center`}>
         <FrameLayout images={images} mapping={mapping} filters={filters} />
       </div>
     );
@@ -25,7 +27,7 @@ export default function PhotoLayoutCard({ images, filters, selectedDesign }) {
   const gridHeight = rows * imageHeight + (rows - 1) * gap;
 
   return (
-    <div className="bg-white rounded-2xl shadow-2xl p-6 flex flex-col items-center">
+    <div className={`${colors.card} rounded-2xl shadow-2xl p-6 flex flex-col items-center`}>
       <div
         className={`relative grid ${isGrid ? "grid-cols-2" : "grid-cols-1"} gap-4`}
         style={{
@@ -49,7 +51,7 @@ export default function PhotoLayoutCard({ images, filters, selectedDesign }) {
             key={i}
             src={img}
             alt={`Shot ${i + 1}`}
-            className="rounded-lg border-2 border-pink-200 object-cover relative z-20"
+            className={`rounded-lg border-2 ${colors.borderLight} object-cover relative z-20`}
             style={{
               width: `${imageWidth}px`,
               height: `${imageHeight}px`,

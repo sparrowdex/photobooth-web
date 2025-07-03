@@ -5,6 +5,7 @@ import AppLayout from "./AppLayout";
 import StripDesign from "./StripDesign";
 import BackButton from "./BackButton";
 import NextButton from "./NextButton";
+import { useTheme } from "./ThemeContext";
 
 // Example overlays for each layout (replace with your own PNG/SVG overlays)
 //3 images do not fit the card, need to specify the two overlay per row thing, and as no of designs increases so does pagination 
@@ -48,6 +49,7 @@ const designOverlaysByLayout = {
 
 
 export default function Photobooth({ onBack }) {
+  const { colors } = useTheme();
   const [layout, setLayout] = useState(null);
   const [showCamera, setShowCamera] = useState(false);
   const [capturedImages, setCapturedImages] = useState(null);
@@ -127,7 +129,7 @@ export default function Photobooth({ onBack }) {
       <div className="flex flex-col items-center">
         <div className="mb-6 flex flex-col items-center">
           <span
-            className="text-3xl text-pink-600 mb-1"
+            className={`text-3xl ${colors.text} mb-1`}
             style={{ fontFamily: "'Pacifico', cursive", letterSpacing: "1px" }}
           >
             You chose:

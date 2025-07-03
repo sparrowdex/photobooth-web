@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { useTheme } from "./ThemeContext";
 
 export default function AppLayout({ children }) {
+  const { colors, isDarkMode } = useTheme();
   const [star, setStar] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -12,7 +14,7 @@ export default function AppLayout({ children }) {
   }, []);
 
   return (
-    <div className="animated-pink-bg min-h-screen flex items-center justify-center relative transition-all duration-1000">
+    <div className={`${colors.animatedBg} min-h-screen flex items-center justify-center relative transition-all duration-1000`}>
       {/* Shooting Star Pointer */}
       <div
         style={{
@@ -31,12 +33,12 @@ export default function AppLayout({ children }) {
               y1="35"
               x2="35"
               y2="5"
-              stroke="#f472b6"
+              stroke={isDarkMode ? "#3b82f6" : "#f472b6"}
               strokeWidth="4"
               strokeLinecap="round"
               opacity="0.7"
             />
-            <circle cx="35" cy="5" r="6" fill="#f472b6" />
+            <circle cx="35" cy="5" r="6" fill={isDarkMode ? "#3b82f6" : "#f472b6"} />
             <circle cx="35" cy="5" r="3" fill="#fff" opacity="0.7" />
           </g>
         </svg>

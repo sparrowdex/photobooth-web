@@ -1,8 +1,10 @@
 
 
 import { useEffect, useState } from "react";
+import { useTheme } from "./ThemeContext";
 
 export default function Landing({ onStart }) {
+  const { colors, isDarkMode } = useTheme();
   const [star, setStar] = useState({ x: 0, y: 0 });
   const [cardHovered, setCardHovered] = useState(false);
 
@@ -16,7 +18,7 @@ export default function Landing({ onStart }) {
   }, []);
 
   return (
-    <div className="animated-pink-bg min-h-screen flex items-center justify-center relative transition-all duration-1000">
+    <div className={`${colors.animatedBg} min-h-screen flex items-center justify-center relative transition-all duration-1000`}>
       {/* Shooting Star */}
       <div
         style={{
@@ -35,12 +37,12 @@ export default function Landing({ onStart }) {
               y1="35"
               x2="35"
               y2="5"
-              stroke="#f472b6"
+              stroke={isDarkMode ? "#3b82f6" : "#f472b6"}
               strokeWidth="4"
               strokeLinecap="round"
               opacity="0.7"
             />
-            <circle cx="35" cy="5" r="6" fill="#f472b6" />
+            <circle cx="35" cy="5" r="6" fill={isDarkMode ? "#3b82f6" : "#f472b6"} />
             <circle cx="35" cy="5" r="3" fill="#fff" opacity="0.7" />
           </g>
         </svg>
@@ -89,15 +91,15 @@ export default function Landing({ onStart }) {
 
 
         {/* Main Card */}
-        <div className="relative bg-white bg-opacity-90 rounded-3xl shadow-2xl px-12 py-14 flex flex-col items-center">
-          <h1 className="text-5xl font-pacifico mb-4 text-pink-600 drop-shadow-lg">
+        <div className={`relative ${colors.card} bg-opacity-90 rounded-3xl ${colors.shadow} px-12 py-14 flex flex-col items-center`}>
+          <h1 className={`text-5xl font-pacifico mb-4 ${colors.text} drop-shadow-lg`}>
             Welcome to Photobooth
           </h1>
-          <p className="text-xl mb-8 text-pink-400">
+          <p className={`text-xl mb-8 ${colors.textSecondary}`}>
             Create, customize, and download your own photo strips!
           </p>
           <button
-            className="px-10 py-4 bg-pink-500 text-white rounded-xl shadow hover:bg-pink-600 transition text-xl font-semibold"
+            className={`px-10 py-4 ${colors.button} text-white rounded-xl shadow transition text-xl font-semibold`}
             onClick={onStart}
           >
             Start Photobooth
@@ -140,7 +142,7 @@ export default function Landing({ onStart }) {
 </div>
 
       {/* Footer */}
-      <footer className="absolute bottom-4 text-pink-300 text-sm">
+      <footer className={`absolute bottom-4 ${colors.textSecondary} text-sm`}>
         Made with React, p5.js, and Tailwind CSS
       </footer>
     </div>

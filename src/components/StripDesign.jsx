@@ -5,9 +5,11 @@ import BackButton from "./BackButton";
 import NextButton from "./NextButton";
 import frameMappings from "./frameMappings";
 import { parseGIF, decompressFrames } from 'gifuct-js';
+import { useTheme } from "./ThemeContext";
 
 // PAGINATED DESIGN GRID
 function DesignGrid({ designs, selectedDesign, onSelectDesign }) {
+  const { colors } = useTheme();
   const pageSize = 2; // 2 per row × 2 rows
   const [page, setPage] = useState(0);
   const pageCount = Math.ceil(designs.length / pageSize);
@@ -22,8 +24,8 @@ function DesignGrid({ designs, selectedDesign, onSelectDesign }) {
             key={design.key}
             className={`border-2 rounded-lg p-2 cursor-pointer transition ${
               selectedDesign?.key === design.key
-                ? "border-pink-500 ring-2 ring-pink-300"
-                : "border-gray-200"
+                ? `${colors.border} ring-2 ring-${colors.primary}-300`
+                : colors.isDarkMode ? "border-gray-600" : "border-gray-200"
             }`}
             onClick={() => onSelectDesign(design)}
           >
@@ -32,31 +34,33 @@ function DesignGrid({ designs, selectedDesign, onSelectDesign }) {
         ))}
       </div>
       <div className="flex justify-center gap-2 mb-2">
-        <button
-          onClick={() => setPage((p) => Math.max(0, p - 1))}
-          disabled={page === 0}
-          className="px-2 py-1 rounded bg-gray-100"
-        >
-          Previous
-        </button>
+        {page > 0 && (
+          <button
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            className={`px-2 py-1 rounded ${colors.isDarkMode ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-100 hover:bg-gray-200"} transition`}
+          >
+            Previous
+          </button>
+        )}
         {[...Array(pageCount)].map((_, idx) => (
           <button
             key={idx}
             className={`px-2 py-1 rounded ${
-              page === idx ? "bg-pink-200 font-bold" : "bg-gray-100"
+              page === idx ? `bg-${colors.primary}-200 font-bold` : colors.isDarkMode ? "bg-gray-700" : "bg-gray-100"
             }`}
             onClick={() => setPage(idx)}
           >
             {idx + 1}
           </button>
         ))}
-        <button
-          onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-          disabled={page === pageCount - 1}
-          className="px-2 py-1 rounded bg-gray-100"
-        >
-          Next
-        </button>
+        {page < pageCount - 1 && (
+          <button
+            onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+            className={`px-2 py-1 rounded ${colors.isDarkMode ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-100 hover:bg-gray-200"} transition`}
+          >
+            Next
+          </button>
+        )}
       </div>
     </>
   );
@@ -86,6 +90,7 @@ function drawImageCover(ctx, img, x, y, w, h) {
 }
 
 export default function StripDesign({ images, designs, onBack, captured = [] }) {
+  const { colors } = useTheme();
   const [step, setStep] = useState("filters");
   const [photoFilters, setPhotoFilters] = useState(images.map(() => ""));
   const [selectedDesign, setSelectedDesign] = useState(designs[0] || null);
@@ -352,7 +357,7 @@ export default function StripDesign({ images, designs, onBack, captured = [] }) 
   };
 
   return (
-    <div className="flex flex-col md:flex-row w-full min-h-screen justify-center items-center gap-8 bg-gradient-to-br from-pink-300 via-purple-200 to-indigo-200 overflow-x-hidden">
+    <div className={`flex flex-col md:flex-row w-full min-h-screen justify-center items-center gap-8 ${colors.background} overflow-x-hidden`}>
       <div className="flex-shrink-0">
         <PhotoLayoutCard
           images={images}

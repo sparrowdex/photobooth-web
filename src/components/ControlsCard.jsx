@@ -2,6 +2,7 @@
 import { useState } from "react";
 import BackButton from "./BackButton";
 import { FilterCarousel } from "./FilterCarousel"; // Import the carousel
+import { useTheme } from "./ThemeContext";
 
 const FILTERS = [
   { name: "None", value: "" },
@@ -33,12 +34,13 @@ export default function ControlsCard({
   onDownload,
   onBack,
 }) {
+  const { colors } = useTheme();
   const [activeFilter, setActiveFilter] = useState(null);
 
   if (step === "filters") {
     return (
-      <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center min-w-[340px]">
-        <div className="text-xl font-bold text-pink-600 mb-4">Choose a Filter</div>
+      <div className={`${colors.card} rounded-2xl ${colors.shadow} p-8 flex flex-col items-center min-w-[340px]`}>
+        <div className={`text-xl font-bold ${colors.text} mb-4`}>Choose a Filter</div>
         {/* PAGINATED FILTER BUTTONS */}
         <FilterCarousel
           filters={FILTERS}
@@ -49,7 +51,7 @@ export default function ControlsCard({
           setFilters={setFilters}
         />
         <button
-          className="mt-8 px-6 py-2 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-semibold shadow hover:from-pink-500 hover:to-pink-700 transition-all duration-200"
+          className={`mt-8 px-6 py-2 rounded-full bg-gradient-to-r ${colors.primaryGradient} text-white font-semibold shadow hover:${colors.primaryGradientHover} transition-all duration-200`}
           onClick={() => setStep("design")}
         >
           Next
@@ -61,39 +63,71 @@ export default function ControlsCard({
 
   // DESIGN SELECTION STEP
   if (step === "design") {
+    const pageSize = 4; // Show 4 designs at a time
+    const [page, setPage] = useState(0);
+    const pageCount = Math.ceil(designs.length / pageSize);
+    const start = page * pageSize;
+    const paginatedDesigns = designs.slice(start, start + pageSize);
+
     return (
-      <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center min-w-[340px]">
-        <div className="text-xl font-bold text-pink-600 mb-4">Choose a Design Overlay</div>
-        <div className="flex gap-4 mb-8">
-          {designs.map((design, i) => (
+      <div className={`${colors.card} rounded-2xl ${colors.shadow} p-8 flex flex-col items-center min-w-[340px]`}>
+        <div className={`text-xl font-bold ${colors.text} mb-4`}>Choose a Design Overlay</div>
+        <div className="flex gap-4 mb-4">
+          {paginatedDesigns.map((design, i) => (
             <button
-              key={i}
+              key={start + i}
               onClick={() => setSelectedDesign(design)}
               className={`border-2 rounded-xl p-1 transition ${
                 selectedDesign === design
-                  ? "border-pink-500 shadow-lg"
+                  ? `${colors.border} shadow-lg`
                   : "border-transparent"
               }`}
             >
-              <div className="w-32 h-28 flex items-center justify-center bg-gray-50 rounded-lg overflow-hidden">
+              <div className={`w-32 h-28 flex items-center justify-center ${colors.isDarkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg overflow-hidden`}>
                 <img
                   src={design}
-                  alt={`Design ${i + 1}`}
+                  alt={`Design ${start + i + 1}`}
                   className="w-full h-full object-contain"
                 />
               </div>
             </button>
           ))}
         </div>
+        {/* Pagination controls */}
+        {pageCount > 1 && (
+          <div className="flex items-center gap-2 mb-6">
+            {page > 0 && (
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 transition"
+                aria-label="Previous Designs"
+              >
+                &lt;
+              </button>
+            )}
+            <span className={`text-sm ${colors.isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              {page + 1} of {pageCount}
+            </span>
+            {page < pageCount - 1 && (
+              <button
+                onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 transition"
+                aria-label="Next Designs"
+              >
+                &gt;
+              </button>
+            )}
+          </div>
+        )}
         <button
-          className="mt-8 px-6 py-2 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-semibold shadow hover:from-pink-500 hover:to-pink-700 transition-all duration-200"
+          className={`mt-8 px-6 py-2 rounded-full bg-gradient-to-r ${colors.primaryGradient} text-white font-semibold shadow hover:${colors.primaryGradientHover} transition-all duration-200`}
           onClick={onDownload}
           disabled={!selectedDesign}
         >
           Download Strip
         </button>
         <button
-          className="mt-4 px-4 py-2 rounded-full bg-pink-100 text-pink-600 font-semibold hover:bg-pink-200 transition"
+          className={`mt-4 px-4 py-2 rounded-full ${colors.buttonSecondary} font-semibold transition`}
           onClick={() => setStep("filters")}
         >
           Back to Filters
