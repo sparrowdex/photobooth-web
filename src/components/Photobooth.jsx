@@ -20,6 +20,7 @@ const designOverlaysByLayout = {
     { key: "1shot-design7", url: "/photobooth-web/designs/1shot-design7.png" },
     { key: "1shot-design8", url: "/photobooth-web/designs/1shot-design8.png" },
     { key: "1shot-design9", url: "/photobooth-web/designs/1shot-design9.png" },
+    { key: "1shot-design10", url: "/photobooth-web/designs/1shot-design10.png" },
 
   ],
   3: [

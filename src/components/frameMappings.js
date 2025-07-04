@@ -73,6 +73,15 @@ const frameMappings = {
     ],
   },
 
+  "1shot-design10": {
+    frame: "/photobooth-web/designs/1shot-design10.png",
+    frameWidth: 500,
+    frameHeight: 330,
+    windows: [
+      { left: 35, top: 55, width: 200, height: 235, borderRadius: 0 }
+    ],
+  },
+
   "3shot-design1": {
     frame: "/photobooth-web/designs/3shot-design1.png",
     frameWidth: 450,
