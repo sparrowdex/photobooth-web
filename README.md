@@ -28,10 +28,10 @@ A modern, interactive web-based photobooth application built with React, Vite, a
 - **Paginated filter selection** - browse through all available filters
 
 ### 🌈 **Theme System**
-- **Dual theme support**: Pink (Light) and Blue (Dark) modes
+- **Dual theme support**: Pink (Light) and Red (Dark) modes
 - **Theme toggle** with sun/moon icons
 - **Persistent theme preference** saved in localStorage
-- **Cream-colored cards** in blue theme for better contrast
+- **Cream-colored cards** in red theme for better contrast
 - **Animated backgrounds** with gradient effects
 - **Shooting star cursor** that adapts to theme colors
 
@@ -267,7 +267,7 @@ This will build the project and deploy it to the configured GitHub Pages URL.
 ## 🎉 Recent Updates
 
 - ✅ **GIF capture and download** functionality
-- ✅ **Theme system** with pink/blue modes
+- ✅ **Theme system** with pink/red modes
 - ✅ **Enhanced filter system** with "All Photos" option
 - ✅ **Improved pagination** controls
 - ✅ **Shooting star cursor** animation

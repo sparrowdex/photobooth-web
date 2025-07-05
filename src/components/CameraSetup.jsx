@@ -224,7 +224,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
             <span>
               <b>Rotate your device to landscape (horizontal) mode</b><br />
               for the best photobooth experience.<br /><br />
-              <span className={`text-base ${isDarkMode ? 'text-blue-100' : 'text-pink-100'} font-normal`}>
+              <span className={`text-base ${isDarkMode ? 'text-red-100' : 'text-pink-100'} font-normal`}>
                 This app is designed for wide screens.<br />
                 Please turn your phone or tablet sideways.
               </span>
@@ -242,7 +242,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
             width: 60,
             height: 60,
             background: isDarkMode 
-              ? 'radial-gradient(circle at 30% 30%, #3b82f6, #1d4ed8)' 
+              ? 'radial-gradient(circle at 30% 30%, #dc2626, #991b1b)' 
               : 'radial-gradient(circle at 30% 30%, #f472b6, #a21caf)',
             borderRadius: '50%',
             boxShadow: '0 4px 24px rgba(0,0,0,0.2)',

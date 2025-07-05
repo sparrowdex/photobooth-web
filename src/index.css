@@ -16,10 +16,10 @@ body {
   animation: pinkGradient 12s ease-in-out infinite;
 }
 
-.animated-blue-bg {
-  background: linear-gradient(120deg, #1e3a8a, #3b82f6, #1d4ed8, #3b82f6, #1e3a8a);
+.animated-red-bg {
+  background: linear-gradient(120deg, #7f1d1d, #dc2626, #991b1b, #dc2626, #7f1d1d);
   background-size: 400% 400%;
-  animation: blueGradient 20s ease-in-out infinite;
+  animation: redGradient 20s ease-in-out infinite;
 }
 
 @keyframes pinkGradient {
@@ -28,7 +28,7 @@ body {
   100% { background-position: 0% 50%; }
 }
 
-@keyframes blueGradient {
+@keyframes redGradient {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }

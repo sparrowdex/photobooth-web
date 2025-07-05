@@ -33,12 +33,12 @@ export default function AppLayout({ children }) {
               y1="35"
               x2="35"
               y2="5"
-              stroke={isDarkMode ? "#3b82f6" : "#f472b6"}
+              stroke={isDarkMode ? "#dc2626" : "#f472b6"}
               strokeWidth="4"
               strokeLinecap="round"
               opacity="0.7"
             />
-            <circle cx="35" cy="5" r="6" fill={isDarkMode ? "#3b82f6" : "#f472b6"} />
+            <circle cx="35" cy="5" r="6" fill={isDarkMode ? "#dc2626" : "#f472b6"} />
             <circle cx="35" cy="5" r="3" fill="#fff" opacity="0.7" />
           </g>
         </svg>
