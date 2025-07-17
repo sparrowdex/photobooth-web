@@ -20,8 +20,8 @@ const designOverlaysByLayout = {
     { key: "1shot-design7", url: "/photobooth-web/designs/1shot-design7.png" },
     { key: "1shot-design8", url: "/photobooth-web/designs/1shot-design8.png" },
     { key: "1shot-design9", url: "/photobooth-web/designs/1shot-design9.png" },
-    { key: "1shot-design10", url: "/photobooth-web/designs/1shot-design10.png" },
-
+    { key: "1shot-design10", url: "/photobooth-web/designs/1shot-design10.png" }
+    // Removed letter from design selection
   ],
   3: [
     { key: "3shot-design1", url: "/photobooth-web/designs/3shot-design1.png" },
@@ -55,6 +55,7 @@ export default function Photobooth({ onBack }) {
   const [showCamera, setShowCamera] = useState(false);
   const [capturedImages, setCapturedImages] = useState(null);
   const [showStripDesign, setShowStripDesign] = useState(false);
+  const [showLetterOverlay, setShowLetterOverlay] = useState(false);
   const [selectedDesign, setSelectedDesign] = useState(null);
 
   // Download handler for photo strip
@@ -102,6 +103,31 @@ export default function Photobooth({ onBack }) {
 
   // Step 3: Strip Design Selection
   if (showStripDesign && capturedImages) {
+    // For 1-shot layout, show the letter overlay after strip creation
+    if (layout.shots === 1 && showLetterOverlay) {
+      return (
+        <AppLayout>
+          <StripDesign
+            images={capturedImages.map(c => c.photo)}
+            captured={capturedImages}
+            designs={designOverlays}
+            selectedDesign={selectedDesign}
+            onSelectDesign={setSelectedDesign}
+            onBack={() => {
+              setShowStripDesign(false);
+              setCapturedImages(null);
+              setShowCamera(true);
+            }}
+            onNext={() => {
+              setShowLetterOverlay(true);
+            }}
+            onDownload={handleDownload}
+            showLetterOverlay={true}
+          />
+        </AppLayout>
+      );
+    }
+    // For other layouts, normal flow
     return (
       <AppLayout>
         <StripDesign
@@ -119,6 +145,8 @@ export default function Photobooth({ onBack }) {
             alert("You chose a design! Implement the next step here.");
           }}
           onDownload={handleDownload}
+          showLetterOverlay={showLetterOverlay}
+          setShowLetterOverlay={setShowLetterOverlay}
         />
       </AppLayout>
     );

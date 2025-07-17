@@ -3,14 +3,14 @@ import frameMappings from "./frameMappings";
 import FrameLayout from "./FrameLayout";
 import { useTheme } from "./ThemeContext";
 
-export default function PhotoLayoutCard({ images, filters, selectedDesign }) {
+export default function PhotoLayoutCard({ images, filters, selectedDesign, transparentCard }) {
   const { colors } = useTheme();
   const mappingKey = selectedDesign?.key;
   const mapping = mappingKey ? frameMappings[mappingKey] : null;
 
   if (mapping) {
     return (
-      <div className={`${colors.card} rounded-2xl shadow-2xl p-6 flex flex-col items-center`}>
+      <div className={transparentCard ? "bg-transparent shadow-none p-6 flex flex-col items-center" : `${colors.card} rounded-2xl shadow-2xl p-6 flex flex-col items-center`}>
         <FrameLayout images={images} mapping={mapping} filters={filters} />
       </div>
     );

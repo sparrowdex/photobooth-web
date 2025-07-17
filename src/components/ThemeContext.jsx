@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext } from 'react';
 
 const ThemeContext = createContext();
 
@@ -11,49 +11,9 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider = ({ children }) => {
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    // Check localStorage for saved preference
-    const saved = localStorage.getItem('photobooth-theme');
-    if (saved) {
-      return saved === 'dark';
-    }
-    // Default to light mode
-    return false;
-  });
-
-  useEffect(() => {
-    // Save theme preference to localStorage
-    localStorage.setItem('photobooth-theme', isDarkMode ? 'dark' : 'light');
-  }, [isDarkMode]);
-
-  const toggleTheme = () => {
-    setIsDarkMode(prev => !prev);
-  };
-
   const theme = {
-    isDarkMode,
-    toggleTheme,
-    colors: isDarkMode ? {
-      // Dark mode - Red theme
-      primary: 'red',
-      primaryLight: 'red-400',
-      primaryDark: 'red-600',
-      primaryHover: 'red-500',
-      primaryGradient: 'from-red-500 to-red-700',
-      primaryGradientHover: 'from-red-600 to-red-800',
-      background: 'bg-gradient-to-br from-gray-900 via-red-900 to-pink-900',
-      card: 'bg-amber-50',
-      text: 'text-red-800 font-bold',
-      textSecondary: 'text-red-600',
-      border: 'border-red-500',
-      borderLight: 'border-red-200',
-      button: 'bg-red-500 hover:bg-red-600',
-      buttonSecondary: 'bg-red-100 text-red-600 hover:bg-red-200',
-      animatedBg: 'animated-red-bg',
-      overlay: 'bg-white',
-      shadow: 'shadow-2xl',
-    } : {
-      // Light mode - Pink theme
+    colors: {
+      // Light mode - Pink theme only
       primary: 'pink',
       primaryLight: 'pink-400',
       primaryDark: 'pink-600',
@@ -71,7 +31,7 @@ export const ThemeProvider = ({ children }) => {
       animatedBg: 'animated-pink-bg',
       overlay: 'bg-white',
       shadow: 'shadow-2xl',
-    }
+    },
   };
 
   return (

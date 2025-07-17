@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useTheme } from "./ThemeContext";
 
 export default function Landing({ onStart }) {
-  const { colors, isDarkMode } = useTheme();
+  const { colors } = useTheme();
   const [star, setStar] = useState({ x: 0, y: 0 });
   const [cardHovered, setCardHovered] = useState(false);
 
@@ -37,12 +37,12 @@ export default function Landing({ onStart }) {
               y1="35"
               x2="35"
               y2="5"
-              stroke={isDarkMode ? "#dc2626" : "#f472b6"}
+              stroke="#f472b6"
               strokeWidth="4"
               strokeLinecap="round"
               opacity="0.7"
             />
-            <circle cx="35" cy="5" r="6" fill={isDarkMode ? "#dc2626" : "#f472b6"} />
+            <circle cx="35" cy="5" r="6" fill="#f472b6" />
             <circle cx="35" cy="5" r="3" fill="#fff" opacity="0.7" />
           </g>
         </svg>
@@ -55,40 +55,38 @@ export default function Landing({ onStart }) {
         onMouseLeave={() => setCardHovered(false)}
         style={{ overflow: "visible" }}
       >
-        
-      {/* LEFT SIDE: Back Strip */}
-  <div
-    className={`hidden md:flex flex-col items-center justify-center absolute left-0 top-1/2 -translate-y-1/2
-      transition-all duration-500
-      ${cardHovered
-        ? "opacity-80 -translate-x-20 -rotate-12 z-0"
-        : "opacity-0 -translate-x-36 z-[-2]"
-      }`}
-    style={{ pointerEvents: "none" }}
-  >
-    <img
-      src="./photostrip-behind-left.png"
-      alt="Photo Strip Back Left"
-      className="w-28 h-72 object-cover rounded-xl"
-    />
-  </div>
-  {/* LEFT SIDE: Front Strip */}
-  <div
-    className={`hidden md:flex flex-col items-center justify-center absolute left-0 top-1/2 -translate-y-1/2
-      transition-all duration-500
-      ${cardHovered
-        ? "opacity-100 -translate-x-10 -rotate-6 z-10"
-        : "opacity-0 -translate-x-32 z-[-1]"
-      }`}
-    style={{ pointerEvents: "none" }}
-  >
-    <img
-      src="photostrip-sample-left.png"
-      alt="Photo Strip Left"
-      className="w-28 h-72 object-cover rounded-xl"
-    />
-  </div>
-
+        {/* LEFT SIDE: Back Strip */}
+        <div
+          className={`hidden md:flex flex-col items-center justify-center absolute left-0 top-1/2 -translate-y-1/2
+            transition-all duration-500
+            ${cardHovered
+              ? "opacity-80 -translate-x-20 -rotate-12 z-0"
+              : "opacity-0 -translate-x-36 z-[-2]"
+            }`}
+          style={{ pointerEvents: "none" }}
+        >
+          <img
+            src="./photostrip-behind-left.png"
+            alt="Photo Strip Back Left"
+            className="w-28 h-72 object-cover rounded-xl"
+          />
+        </div>
+        {/* LEFT SIDE: Front Strip */}
+        <div
+          className={`hidden md:flex flex-col items-center justify-center absolute left-0 top-1/2 -translate-y-1/2
+            transition-all duration-500
+            ${cardHovered
+              ? "opacity-100 -translate-x-10 -rotate-6 z-10"
+              : "opacity-0 -translate-x-32 z-[-1]"
+            }`}
+          style={{ pointerEvents: "none" }}
+        >
+          <img
+            src="photostrip-sample-left.png"
+            alt="Photo Strip Left"
+            className="w-28 h-72 object-cover rounded-xl"
+          />
+        </div>
 
         {/* Main Card */}
         <div className={`relative ${colors.card} bg-opacity-90 rounded-3xl ${colors.shadow} px-12 py-14 flex flex-col items-center`}>
@@ -106,45 +104,39 @@ export default function Landing({ onStart }) {
           </button>
         </div>
 
-        
-   {/* RIGHT SIDE: Back Strip */}
-  <div
-    className={`hidden md:flex flex-col items-center justify-center absolute right-0 top-1/2 -translate-y-1/2
-      transition-all duration-500
-      ${cardHovered
-        ? "opacity-80 translate-x-20 rotate-12 z-0"
-        : "opacity-0 translate-x-36 z-[-2]"
-      }`}
-    style={{ pointerEvents: "none" }}
-  >
-    <img
-      src="./photostrip-behind-right.png"
-      alt="Photo Strip Back Right"
-      className="w-28 h-72 object-cover rounded-xl"
-    />
-  </div>
-  {/* RIGHT SIDE: Front Strip */}
-  <div
-    className={`hidden md:flex flex-col items-center justify-center absolute right-0 top-1/2 -translate-y-1/2
-      transition-all duration-500
-      ${cardHovered
-        ? "opacity-100 translate-x-10 rotate-6 z-10"
-        : "opacity-0 translate-x-32 z-[-1]"
-      }`}
-    style={{ pointerEvents: "none" }}
-  >
-    <img
-      src="photostrip-sample-right.png"
-      alt="Photo Strip Right"
-      className="w-28 h-72 object-cover rounded-xl"
-    />
-  </div>
-</div>
-
-      {/* Footer */}
-      <footer className={`absolute bottom-4 ${colors.textSecondary} text-sm`}>
-        Made with React, p5.js, and Tailwind CSS
-      </footer>
+        {/* RIGHT SIDE: Back Strip */}
+        <div
+          className={`hidden md:flex flex-col items-center justify-center absolute right-0 top-1/2 -translate-y-1/2
+            transition-all duration-500
+            ${cardHovered
+              ? "opacity-80 translate-x-20 rotate-12 z-0"
+              : "opacity-0 translate-x-36 z-[-2]"
+            }`}
+          style={{ pointerEvents: "none" }}
+        >
+          <img
+            src="./photostrip-behind-right.png"
+            alt="Photo Strip Back Right"
+            className="w-28 h-72 object-cover rounded-xl"
+          />
+        </div>
+        {/* RIGHT SIDE: Front Strip */}
+        <div
+          className={`hidden md:flex flex-col items-center justify-center absolute right-0 top-1/2 -translate-y-1/2
+            transition-all duration-500
+            ${cardHovered
+              ? "opacity-100 translate-x-10 rotate-6 z-10"
+              : "opacity-0 translate-x-32 z-[-1]"
+            }`}
+          style={{ pointerEvents: "none" }}
+        >
+          <img
+            src="photostrip-sample-right.png"
+            alt="Photo Strip Right"
+            className="w-28 h-72 object-cover rounded-xl"
+          />
+        </div>
+      </div>
     </div>
   );
 }

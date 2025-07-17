@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import PhotoLayoutCard from "./PhotoLayoutCard";
 import ControlsCard from "./ControlsCard";
 import BackButton from "./BackButton";
@@ -25,7 +25,7 @@ function DesignGrid({ designs, selectedDesign, onSelectDesign }) {
             className={`border-2 rounded-lg p-2 cursor-pointer transition ${
               selectedDesign?.key === design.key
                 ? `${colors.border} ring-2 ring-${colors.primary}-300`
-                : colors.isDarkMode ? "border-gray-600" : "border-gray-200"
+                : "border-gray-200"
             }`}
             onClick={() => onSelectDesign(design)}
           >
@@ -37,7 +37,7 @@ function DesignGrid({ designs, selectedDesign, onSelectDesign }) {
         {page > 0 && (
           <button
             onClick={() => setPage((p) => Math.max(0, p - 1))}
-            className={`px-2 py-1 rounded ${colors.isDarkMode ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-100 hover:bg-gray-200"} transition`}
+            className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 transition"
           >
             Previous
           </button>
@@ -46,7 +46,7 @@ function DesignGrid({ designs, selectedDesign, onSelectDesign }) {
           <button
             key={idx}
             className={`px-2 py-1 rounded ${
-              page === idx ? `bg-${colors.primary}-200 font-bold` : colors.isDarkMode ? "bg-gray-700" : "bg-gray-100"
+              page === idx ? `bg-${colors.primary}-200 font-bold` : "bg-gray-100"
             }`}
             onClick={() => setPage(idx)}
           >
@@ -56,7 +56,7 @@ function DesignGrid({ designs, selectedDesign, onSelectDesign }) {
         {page < pageCount - 1 && (
           <button
             onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-            className={`px-2 py-1 rounded ${colors.isDarkMode ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-100 hover:bg-gray-200"} transition`}
+            className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 transition"
           >
             Next
           </button>
@@ -89,7 +89,7 @@ function drawImageCover(ctx, img, x, y, w, h) {
   ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
 }
 
-export default function StripDesign({ images, designs, onBack, captured = [] }) {
+export default function StripDesign({ images, designs, onBack, captured = [], showLetterOverlay, setShowLetterOverlay }) {
   const { colors } = useTheme();
   const [step, setStep] = useState("filters");
   const [photoFilters, setPhotoFilters] = useState(images.map(() => ""));
@@ -98,6 +98,100 @@ export default function StripDesign({ images, designs, onBack, captured = [] }) 
   const [downloadType, setDownloadType] = useState("photo"); // 'photo' or 'gif'
   const [isDownloading, setIsDownloading] = useState(false);
   const [overlayImg, setOverlayImg] = useState(null); // Cache for overlay image
+  const [showTextInput, setShowTextInput] = useState(false);
+  const [letterText, setLetterText] = useState("");
+  // Draggable state
+  const [cardPos, setCardPos] = useState({ x: 0, y: 0 }); // relative to center
+  const [dragging, setDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [mouseStart, setMouseStart] = useState({ x: 0, y: 0 });
+  const cardRef = useRef(null);
+  const [showWriteConfirm, setShowWriteConfirm] = useState(false);
+  // Resizable state
+  const aspectRatio = 5 / 7;
+  const minWidth = 250;
+  const maxWidth = 700;
+  const [cardSize, setCardSize] = useState({ width: 500, height: 700 });
+  const [resizing, setResizing] = useState(false);
+  const [resizeStart, setResizeStart] = useState({ x: 0, width: 500, height: 700 });
+  // Drag/resize state
+  const [dragMode, setDragMode] = useState(null); // 'drag' or 'resize' or null
+  // Text box position state (relative to card)
+  const [textBoxPos, setTextBoxPos] = useState({ x: 0, y: 0 }); // (0,0) is default center
+  const [dragTextBox, setDragTextBox] = useState(false);
+  const [textBoxDragStart, setTextBoxDragStart] = useState({ x: 0, y: 0 });
+  const [textBoxMouseStart, setTextBoxMouseStart] = useState({ x: 0, y: 0 });
+  // Text box rotation state
+  const [textBoxRotation, setTextBoxRotation] = useState(0); // degrees
+  const [rotatingTextBox, setRotatingTextBox] = useState(false);
+  const [rotateStartAngle, setRotateStartAngle] = useState(0);
+  const [rotateStartValue, setRotateStartValue] = useState(0);
+
+  // Text box drag handlers
+  function handleTextBoxDragStart(e) {
+    e.stopPropagation();
+    setDragTextBox(true);
+    const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+    setTextBoxMouseStart({ x: clientX, y: clientY });
+    setTextBoxDragStart({ x: textBoxPos.x, y: textBoxPos.y });
+    document.body.style.cursor = 'move';
+  }
+  function handleTextBoxDrag(e) {
+    if (!dragTextBox) return;
+    const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+    let dx = clientX - textBoxMouseStart.x;
+    let dy = clientY - textBoxMouseStart.y;
+    let newX = textBoxDragStart.x + dx;
+    let newY = textBoxDragStart.y + dy;
+    // Constrain within card
+    const boxW = cardSize.width * 0.8;
+    const boxH = Math.max(120, cardSize.height * 0.28);
+    const minX = -cardSize.width / 2 + boxW / 2 + 12;
+    const maxX = cardSize.width / 2 - boxW / 2 - 12;
+    const minY = -cardSize.height / 2 + boxH / 2 + 12;
+    const maxY = cardSize.height / 2 - boxH / 2 - 12;
+    newX = Math.max(minX, Math.min(maxX, newX));
+    newY = Math.max(minY, Math.min(maxY, newY));
+    setTextBoxPos({ x: newX, y: newY });
+  }
+  function handleTextBoxDragEnd() {
+    setDragTextBox(false);
+    document.body.style.cursor = '';
+  }
+
+  // Rotation handlers
+  function handleTextBoxRotateStart(e) {
+    e.stopPropagation();
+    setRotatingTextBox(true);
+    const rect = cardRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+    const angle = Math.atan2(clientY - centerY, clientX - centerX) * 180 / Math.PI;
+    setRotateStartAngle(angle);
+    setRotateStartValue(textBoxRotation);
+    document.body.style.cursor = 'crosshair';
+  }
+  function handleTextBoxRotate(e) {
+    if (!rotatingTextBox) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+    const angle = Math.atan2(clientY - centerY, clientX - centerX) * 180 / Math.PI;
+    let newAngle = rotateStartValue + (angle - rotateStartAngle);
+    // Clamp to -90 to +90 for usability
+    newAngle = Math.max(-90, Math.min(90, newAngle));
+    setTextBoxRotation(newAngle);
+  }
+  function handleTextBoxRotateEnd() {
+    setRotatingTextBox(false);
+    document.body.style.cursor = '';
+  }
 
   // Preload overlay image when selectedDesign changes
   useEffect(() => {
@@ -119,6 +213,41 @@ export default function StripDesign({ images, designs, onBack, captured = [] }) 
     loadOverlay();
     return () => { isMounted = false; };
   }, [selectedDesign]);
+
+  // Helper to draw text overlay for letter design
+  function drawLetterText(ctx, mapping) {
+    if (!mapping.textArea || !letterText) return;
+    const area = mapping.textArea;
+    ctx.save();
+    ctx.font = `${area.fontSize || 32}px ${area.fontFamily || 'Pacifico, cursive'}`;
+    ctx.fillStyle = area.color || '#b91c1c';
+    ctx.textAlign = area.textAlign || 'center';
+    ctx.textBaseline = 'top';
+    // Word wrap
+    const words = letterText.split(' ');
+    let line = '';
+    const lines = [];
+    const maxWidth = area.width;
+    for (let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      const metrics = ctx.measureText(testLine);
+      const testWidth = metrics.width;
+      if (testWidth > maxWidth && n > 0) {
+        lines.push(line);
+        line = words[n] + ' ';
+      } else {
+        line = testLine;
+      }
+    }
+    lines.push(line);
+    const lineHeight = area.fontSize * 1.2;
+    let y = area.top;
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i].trim(), area.left + area.width / 2, y);
+      y += lineHeight;
+    }
+    ctx.restore();
+  }
 
   // Download logic with frame mapping support and cropping
   const handleDownload = async () => {
@@ -194,6 +323,10 @@ export default function StripDesign({ images, designs, onBack, captured = [] }) 
             resolve();
           };
         });
+      }
+      // Draw letter text if this is the letter design
+      if (mappingKey === "1shot-letter") {
+        drawLetterText(ctx, mapping);
       }
     } else {
       // fallback grid logic (your original code)
@@ -348,6 +481,611 @@ export default function StripDesign({ images, designs, onBack, captured = [] }) 
     });
   };
 
+  // In handleDownloadLetter and handleDownloadLetterAndStrip, apply textBoxRotation to the text overlay
+
+  // Download just the letter card as PNG
+  const handleDownloadLetter = async () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = cardSize.width;
+    canvas.height = cardSize.height;
+    const ctx = canvas.getContext("2d");
+
+    // Create rounded rectangle path
+    const radius = 24; // Match the app's border-radius
+    ctx.beginPath();
+    ctx.moveTo(radius, 0);
+    ctx.lineTo(cardSize.width - radius, 0);
+    ctx.quadraticCurveTo(cardSize.width, 0, cardSize.width, radius);
+    ctx.lineTo(cardSize.width, cardSize.height - radius);
+    ctx.quadraticCurveTo(cardSize.width, cardSize.height, cardSize.width - radius, cardSize.height);
+    ctx.lineTo(radius, cardSize.height);
+    ctx.quadraticCurveTo(0, cardSize.height, 0, cardSize.height - radius);
+    ctx.lineTo(0, radius);
+    ctx.quadraticCurveTo(0, 0, radius, 0);
+    ctx.closePath();
+    ctx.clip();
+
+    // Load and draw the background image
+    const bgImage = new Image();
+    bgImage.crossOrigin = "anonymous";
+    bgImage.src = letterBgImage;
+    
+    await new Promise((resolve, reject) => {
+      bgImage.onload = resolve;
+      bgImage.onerror = reject;
+    });
+
+    // Draw background image
+    ctx.drawImage(bgImage, 0, 0, cardSize.width, cardSize.height);
+
+    // Draw the text overlay
+    if (letterText) {
+      // Load the Pacifico font
+      const font = new FontFace('Pacifico', 'url(https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBp0u-.woff2)');
+      await font.load();
+      document.fonts.add(font);
+
+      ctx.save();
+      // Calculate text area dimensions
+      const fontSize = Math.max(18, cardSize.width * 0.056);
+      const textAreaWidth = cardSize.width * 0.8;
+      const textAreaHeight = Math.max(120, cardSize.height * 0.28);
+      const textBoxCenterX = cardSize.width / 2 + textBoxPos.x;
+      const textBoxCenterY = cardSize.height / 2 + textBoxPos.y;
+      // Rotate context by textBoxRotation around the text box center
+      ctx.translate(textBoxCenterX, textBoxCenterY);
+      ctx.rotate((textBoxRotation * Math.PI) / 180);
+      ctx.translate(-textBoxCenterX, -textBoxCenterY);
+      ctx.font = `${fontSize}px Pacifico, cursive`;
+      ctx.fillStyle = '#b91c1c';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      // Word wrap logic
+      const maxWidth = textAreaWidth * 0.9;
+      const words = letterText.split(' ');
+      let line = '';
+      const lines = [];
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        const testWidth = metrics.width;
+        if (testWidth > maxWidth && n > 0) {
+          lines.push(line);
+          line = words[n] + ' ';
+        } else {
+          line = testLine;
+        }
+      }
+      lines.push(line);
+      const lineHeight = fontSize * 1.2;
+      const textAreaTop = textBoxCenterY - textAreaHeight / 2;
+      const startY = textAreaTop + (textAreaHeight * 0.1);
+      const maxLines = Math.floor((textAreaHeight * 0.8) / lineHeight);
+      for (let i = 0; i < Math.min(lines.length, maxLines); i++) {
+        const y = startY + (i * lineHeight);
+        ctx.fillText(lines[i].trim(), textBoxCenterX, y);
+      }
+      ctx.restore();
+    }
+
+    // Download the canvas as PNG
+    const dataUrl = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = "photobooth-letter.png";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Download letter + strip as composite PNG
+  const handleDownloadLetterAndStrip = async () => {
+    // Calculate the bounding box that contains both the strip and the rotated letter card (with their current positions)
+    const mappingKey = selectedDesign?.key;
+    const mapping = mappingKey ? frameMappings[mappingKey] : null;
+    const stripWidth = mapping ? mapping.frameWidth : 400;
+    const stripHeight = mapping ? mapping.frameHeight : 600;
+    // The strip is always at (0,0) in the preview
+    const stripX = 0;
+    const stripY = 0;
+    // The letter card is positioned relative to the center of the preview area
+    const previewCenterX = stripWidth / 2;
+    const previewCenterY = stripHeight / 2;
+    const cardAbsX = previewCenterX - cardSize.width / 2 + cardPos.x;
+    const cardAbsY = previewCenterY - cardSize.height / 2 + cardPos.y;
+    // Calculate the four corners of the rotated card
+    const angle = -6 * Math.PI / 180;
+    const cx = cardAbsX + cardSize.width / 2;
+    const cy = cardAbsY + cardSize.height / 2;
+    const w = cardSize.width;
+    const h = cardSize.height;
+    const corners = [
+      { x: -w / 2, y: -h / 2 },
+      { x: w / 2, y: -h / 2 },
+      { x: w / 2, y: h / 2 },
+      { x: -w / 2, y: h / 2 },
+    ].map(pt => {
+      // Rotate
+      const xRot = pt.x * Math.cos(angle) - pt.y * Math.sin(angle);
+      const yRot = pt.x * Math.sin(angle) + pt.y * Math.cos(angle);
+      return { x: cx + xRot, y: cy + yRot };
+    });
+    // Bounding box for rotated card
+    const cardMinX = Math.min(...corners.map(pt => pt.x));
+    const cardMaxX = Math.max(...corners.map(pt => pt.x));
+    const cardMinY = Math.min(...corners.map(pt => pt.y));
+    const cardMaxY = Math.max(...corners.map(pt => pt.y));
+    // Bounding box for both strip and card
+    const minX = Math.min(stripX, cardMinX);
+    const minY = Math.min(stripY, cardMinY);
+    const maxX = Math.max(stripX + stripWidth, cardMaxX);
+    const maxY = Math.max(stripY + stripHeight, cardMaxY);
+    const outWidth = maxX - minX;
+    const outHeight = maxY - minY;
+
+    // Set a max download size
+    const maxDownloadSize = 1200;
+    let scale = 1;
+    if (outWidth > maxDownloadSize || outHeight > maxDownloadSize) {
+      scale = Math.min(maxDownloadSize / outWidth, maxDownloadSize / outHeight);
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(outWidth * scale);
+    canvas.height = Math.round(outHeight * scale);
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw the photo strip at its offset
+    const stripOffsetX = (stripX - minX) * scale;
+    const stripOffsetY = (stripY - minY) * scale;
+    if (mapping) {
+      for (let i = 0; i < mapping.windows.length; i++) {
+        const win = mapping.windows[i];
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = images[i];
+        await new Promise((resolve) => {
+          img.onload = () => {
+            ctx.save();
+            ctx.translate(stripOffsetX, stripOffsetY);
+            ctx.scale(scale, scale);
+            if (win.borderRadius) {
+              ctx.beginPath();
+              ctx.moveTo(win.left + win.borderRadius, win.top);
+              ctx.lineTo(win.left + win.width - win.borderRadius, win.top);
+              ctx.quadraticCurveTo(win.left + win.width, win.top, win.left + win.width, win.top + win.borderRadius);
+              ctx.lineTo(win.left + win.width, win.top + win.height - win.borderRadius);
+              ctx.quadraticCurveTo(win.left + win.width, win.top + win.height, win.left + win.width - win.borderRadius, win.top + win.height);
+              ctx.lineTo(win.left + win.borderRadius, win.top + win.height);
+              ctx.quadraticCurveTo(win.left, win.top + win.height, win.left, win.top + win.height - win.borderRadius);
+              ctx.lineTo(win.left, win.top + win.borderRadius);
+              ctx.quadraticCurveTo(win.left, win.top, win.left + win.borderRadius, win.top);
+              ctx.closePath();
+              ctx.clip();
+            } else {
+              ctx.beginPath();
+              ctx.rect(win.left, win.top, win.width, win.height);
+              ctx.closePath();
+              ctx.clip();
+            }
+            ctx.filter = photoFilters[i] || "none";
+            drawImageCover(ctx, img, win.left, win.top, win.width, win.height);
+            ctx.restore();
+            ctx.filter = "none";
+            resolve();
+          };
+        });
+      }
+      // Draw strip overlay
+      if (selectedDesign?.url) {
+        const overlay = new Image();
+        overlay.crossOrigin = "anonymous";
+        overlay.src = selectedDesign.url;
+        await new Promise((resolve) => {
+          overlay.onload = () => {
+            ctx.save();
+            ctx.translate(stripOffsetX, stripOffsetY);
+            ctx.scale(scale, scale);
+            ctx.drawImage(overlay, 0, 0, mapping.frameWidth, mapping.frameHeight);
+            ctx.restore();
+            resolve();
+          };
+        });
+      }
+    }
+
+    // Draw the letter card at its actual on-screen position (relative to the preview area center)
+    // Use the center of the card for rotation and translation
+    const cardOffsetX = (cx - minX) * scale;
+    const cardOffsetY = (cy - minY) * scale;
+    ctx.save();
+    ctx.translate(cardOffsetX, cardOffsetY);
+    ctx.rotate(angle);
+    ctx.translate(-(cardSize.width * scale) / 2, -(cardSize.height * scale) / 2);
+    // Rounded rect path
+    const radius = 24 * scale;
+    ctx.beginPath();
+    ctx.moveTo(radius, 0);
+    ctx.lineTo(cardSize.width * scale - radius, 0);
+    ctx.quadraticCurveTo(cardSize.width * scale, 0, cardSize.width * scale, radius);
+    ctx.lineTo(cardSize.width * scale, cardSize.height * scale - radius);
+    ctx.quadraticCurveTo(cardSize.width * scale, cardSize.height * scale, cardSize.width * scale - radius, cardSize.height * scale);
+    ctx.lineTo(radius, cardSize.height * scale);
+    ctx.quadraticCurveTo(0, cardSize.height * scale, 0, cardSize.height * scale - radius);
+    ctx.lineTo(0, radius);
+    ctx.quadraticCurveTo(0, 0, radius, 0);
+    ctx.closePath();
+    ctx.clip();
+    // Draw letter background
+    const bgImage = new Image();
+    bgImage.crossOrigin = "anonymous";
+    bgImage.src = letterBgImage;
+    await new Promise((resolve, reject) => {
+      bgImage.onload = resolve;
+      bgImage.onerror = reject;
+    });
+    ctx.drawImage(bgImage, 0, 0, cardSize.width * scale, cardSize.height * scale);
+    // Draw the text overlay
+    if (letterText) {
+      // Load the Pacifico font
+      const font = new FontFace('Pacifico', 'url(https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBp0u-.woff2)');
+      await font.load();
+      document.fonts.add(font);
+      // Match the exact styling from the textarea
+      const fontSize = Math.max(18, cardSize.width * 0.056) * scale;
+      ctx.font = `${fontSize}px Pacifico, cursive`;
+      ctx.fillStyle = '#b91c1c';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      const textAreaWidth = cardSize.width * 0.8 * scale;
+      const textAreaHeight = Math.max(120, cardSize.height * 0.28) * scale;
+      // Use user-chosen position (scaled)
+      const textBoxCenterX = (cardSize.width * scale) / 2 + textBoxPos.x * scale;
+      const textBoxCenterY = (cardSize.height * scale) / 2 + textBoxPos.y * scale;
+      const textAreaTop = textBoxCenterY - textAreaHeight / 2;
+      // Rotate context by textBoxRotation around the text box center
+      ctx.translate(textBoxCenterX, textBoxCenterY);
+      ctx.rotate((textBoxRotation * Math.PI) / 180);
+      ctx.translate(-textBoxCenterX, -textBoxCenterY);
+      // Word wrap logic
+      const words = letterText.split(' ');
+      let line = '';
+      const lines = [];
+      const maxWidth = textAreaWidth * 0.9;
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        const testWidth = metrics.width;
+        if (testWidth > maxWidth && n > 0) {
+          lines.push(line);
+          line = words[n] + ' ';
+        } else {
+          line = testLine;
+        }
+      }
+      lines.push(line);
+      const lineHeight = fontSize * 1.2;
+      const startY = textAreaTop + (textAreaHeight * 0.1);
+      const maxLines = Math.floor((textAreaHeight * 0.8) / lineHeight);
+      for (let i = 0; i < Math.min(lines.length, maxLines); i++) {
+        const y = startY + (i * lineHeight);
+        ctx.fillText(lines[i].trim(), textBoxCenterX, y);
+      }
+    }
+    ctx.restore();
+
+    // Download the composite canvas as PNG
+    const dataUrl = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = "photobooth-letter-and-strip.png";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Calculate max characters that fit in the textarea (based on unscaled card size)
+  const calculateMaxChars = () => {
+    const fontSize = Math.max(18, cardSize.width * 0.056); // unscaled
+    const textAreaWidth = cardSize.width * 0.8 * 0.9; // Account for padding
+    const textAreaHeight = Math.max(120, cardSize.height * 0.28) * 0.8;
+    const lineHeight = fontSize * 1.2;
+    const maxLines = Math.floor(textAreaHeight / lineHeight);
+    const avgCharsPerLine = Math.floor(textAreaWidth / (fontSize * 0.6)); // Approximate chars per line
+    return maxLines * avgCharsPerLine;
+  };
+
+  const maxChars = calculateMaxChars();
+  const isTextOverflowing = letterText.length > maxChars;
+
+  // Drag/resize handlers
+  function handleDragStart(e) {
+    if (dragMode === 'resize') return;
+    setDragMode('drag');
+    const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+    setMouseStart({ x: clientX, y: clientY });
+    setDragStart({ x: cardPos.x, y: cardPos.y });
+    document.body.style.cursor = 'grabbing';
+  }
+  function handleDrag(e) {
+    if (dragMode !== 'drag') return;
+    const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+    const dx = clientX - mouseStart.x;
+    const dy = clientY - mouseStart.y;
+    const maxX = 300;
+    const maxY = 200;
+    let newX = dragStart.x + dx;
+    let newY = dragStart.y + dy;
+    newX = Math.max(-maxX, Math.min(maxX, newX));
+    newY = Math.max(-maxY, Math.min(maxY, newY));
+    setCardPos({ x: newX, y: newY });
+  }
+  function handleDragEnd() {
+    if (dragMode === 'drag') {
+      setDragMode(null);
+      document.body.style.cursor = '';
+    }
+  }
+  function handleResizeStart(e) {
+    e.stopPropagation();
+    setDragMode('resize');
+    const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+    setResizeStart({ x: clientX, width: cardSize.width, height: cardSize.height });
+    document.body.style.cursor = 'nwse-resize';
+  }
+  function handleResize(e) {
+    if (dragMode !== 'resize') return;
+    const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+    let delta = clientX - resizeStart.x;
+    let newWidth = Math.max(minWidth, Math.min(maxWidth, resizeStart.width + delta));
+    let newHeight = Math.round(newWidth / aspectRatio);
+    setCardSize({ width: newWidth, height: newHeight });
+  }
+  function handleResizeEnd() {
+    if (dragMode === 'resize') {
+      setDragMode(null);
+      document.body.style.cursor = '';
+    }
+  }
+
+  // Shuffle animation keyframes
+  const shuffleAnim = `@keyframes cardShuffle {
+    0% { opacity: 0; z-index: 1; transform: translate(-50%, -80%) scale(0.8) rotate(-18deg); }
+    60% { opacity: 1; z-index: 100; transform: translate(-50%, -40%) scale(1.05) rotate(-10deg); }
+    80% { opacity: 1; z-index: 100; transform: translate(-50%, -55%) scale(1.02) rotate(-7deg); }
+    100% { opacity: 1; z-index: 100; transform: translate(-50%, -50%) scale(1) rotate(-6deg); }
+  }`;
+  if (typeof document !== 'undefined' && !document.getElementById('cardShuffleAnim')) {
+    const style = document.createElement('style');
+    style.id = 'cardShuffleAnim';
+    style.innerHTML = shuffleAnim;
+    document.head.appendChild(style);
+  }
+
+  // Determine the correct letter background image based on layout
+  let letterBgImage = '/photobooth-web/designs/1shot-letter.jpg';
+  if (images.length === 3) letterBgImage = '/photobooth-web/designs/3shot-letter.jpg';
+  if (images.length === 4) letterBgImage = '/photobooth-web/designs/4shot-letter.jpg';
+  if (images.length === 6) letterBgImage = '/photobooth-web/designs/6shot-letter.jpg';
+
+  // Smoother, springy card animation
+  const cardStyle = {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    width: cardSize.width,
+    height: cardSize.height,
+    zIndex: 100,
+    boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+    borderRadius: 24,
+    background: `url('${letterBgImage}') center/cover no-repeat`,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: dragMode ? 'none' : 'transform 1.1s cubic-bezier(.22,1.61,.36,1)',
+    transform: showLetterOverlay
+      ? `translate(-50%, -50%) translate(${cardPos.x}px, ${cardPos.y}px) rotate(-6deg) scale(1)`
+      : 'translate(-50%, -100vh) scale(0.8)',
+    opacity: showLetterOverlay ? 1 : 0,
+    cursor: dragMode === 'drag' ? 'grabbing' : dragMode === 'resize' ? 'nwse-resize' : 'grab',
+    userSelect: 'none',
+    overflow: 'hidden',
+    animation: showLetterOverlay ? 'cardShuffle 1.1s cubic-bezier(.22,1.61,.36,1)' : 'none',
+  };
+
+  // Show Write Something! button for all supported layouts
+  const showLetterButton = [1, 3, 4, 6].includes(images.length);
+
+  // Calculate preview scale for overlay mode
+  let previewScale = 1;
+  if (showLetterOverlay) {
+    const maxPreviewHeight = window.innerHeight - 120; // leave some padding for controls
+    const stripH = selectedDesign && frameMappings[selectedDesign.key] ? frameMappings[selectedDesign.key].frameHeight : 600;
+    const cardH = cardSize.height;
+    const maxH = Math.max(stripH, cardH);
+    if (maxH > maxPreviewHeight) {
+      previewScale = maxPreviewHeight / maxH;
+    }
+  }
+
+  if (showLetterOverlay) {
+    return (
+      <div
+        className="w-full min-h-screen flex items-center justify-center relative bg-transparent"
+        style={{ overflow: 'auto' }}
+        onMouseMove={e => { handleDrag(e); handleResize(e); handleTextBoxDrag(e); handleTextBoxRotate(e); }}
+        onMouseUp={() => { handleDragEnd(); handleResizeEnd(); handleTextBoxDragEnd(); handleTextBoxRotateEnd(); }}
+        onMouseLeave={() => { handleDragEnd(); handleResizeEnd(); handleTextBoxDragEnd(); handleTextBoxRotateEnd(); }}
+        onTouchMove={e => { handleDrag(e); handleResize(e); handleTextBoxDrag(e); handleTextBoxRotate(e); }}
+        onTouchEnd={() => { handleDragEnd(); handleResizeEnd(); handleTextBoxDragEnd(); handleTextBoxRotateEnd(); }}
+      >
+        {/* Only scale the preview, not the buttons */}
+        <div style={{ transform: `scale(${previewScale})`, transformOrigin: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+          {/* Photo preview always visible on the left */}
+          <div className="flex-shrink-0 z-10">
+            <PhotoLayoutCard
+              images={images}
+              filters={photoFilters}
+              selectedDesign={selectedDesign}
+              transparentCard={true}
+            />
+          </div>
+          {/* Draggable & Resizable & Rotatable Letter Card Overlay */}
+          <div
+            ref={cardRef}
+            style={cardStyle}
+            onMouseDown={e => {
+              // Only start drag if not on resize handle
+              if (e.target.dataset && e.target.dataset.resizeHandle) return;
+              if (e.target.dataset && e.target.dataset.textBox) return;
+              handleDragStart(e);
+            }}
+            onTouchStart={e => {
+              if (e.target.dataset && e.target.dataset.resizeHandle) return;
+              if (e.target.dataset && e.target.dataset.textBox) return;
+              handleDragStart(e);
+            }}
+          >
+            {/* Draggable & Rotatable Text Box */}
+            <div
+              data-text-box
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                transform: `translate(-50%, -50%) translate(${textBoxPos.x}px, ${textBoxPos.y}px) rotate(${textBoxRotation}deg)`,
+                width: '80%',
+                height: Math.max(120, cardSize.height * 0.28),
+                cursor: dragTextBox ? 'move' : 'grab',
+                zIndex: 20,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              onMouseDown={handleTextBoxDragStart}
+              onTouchStart={handleTextBoxDragStart}
+            >
+              <textarea
+                value={letterText}
+                onChange={e => setLetterText(e.target.value)}
+                placeholder="Type your message here..."
+                maxLength={maxChars}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  background: isTextOverflowing ? 'rgba(255,200,200,0.8)' : 'rgba(255,255,255,0.7)',
+                  border: isTextOverflowing ? '2px solid #ff6b6b' : 'none',
+                  borderRadius: 16,
+                  fontSize: Math.max(18, cardSize.width * 0.056),
+                  fontFamily: 'Pacifico, cursive',
+                  color: isTextOverflowing ? '#d63031' : '#b91c1c',
+                  textAlign: 'center',
+                  outline: 'none',
+                  resize: 'none',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                }}
+              />
+              {/* Rotate Handle */}
+              <div
+                onMouseDown={handleTextBoxRotateStart}
+                onTouchStart={handleTextBoxRotateStart}
+                style={{
+                  position: 'absolute',
+                  right: -16,
+                  top: -16,
+                  transform: 'none',
+                  width: 32,
+                  height: 32,
+                  background: 'rgba(255,255,255,0.8)',
+                  borderRadius: '50%',
+                  cursor: 'crosshair',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 30,
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                  userSelect: 'none',
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#b91c1c" strokeWidth="2"><path d="M10 2a8 8 0 1 1-8 8" /><polyline points="2 2 10 2 10 10" /></svg>
+              </div>
+              {/* Character counter */}
+              <div style={{
+                position: 'absolute',
+                bottom: 8,
+                right: 16,
+                fontSize: Math.max(12, cardSize.width * 0.03),
+                color: isTextOverflowing ? '#d63031' : '#b91c1c',
+                fontWeight: 'bold',
+                background: 'rgba(255,255,255,0.8)',
+                padding: '4px 8px',
+                borderRadius: 8,
+                zIndex: 15,
+              }}>
+                {letterText.length}/{maxChars}
+              </div>
+            </div>
+            {/* Resize Handle */}
+            <div
+              data-resize-handle
+              onMouseDown={handleResizeStart}
+              onTouchStart={handleResizeStart}
+              style={{
+                position: 'absolute',
+                right: 0,
+                bottom: 0,
+                width: 32,
+                height: 32,
+                background: 'rgba(255,255,255,0.7)',
+                borderTopLeftRadius: 12,
+                cursor: 'nwse-resize',
+                display: 'flex',
+                alignItems: 'flex-end',
+                justifyContent: 'flex-end',
+                zIndex: 10,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                userSelect: 'none',
+              }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2"><polyline points="16 20 20 20 20 16" /><line x1="14" y1="20" x2="20" y2="14" /></svg>
+            </div>
+            {/* Go Back Button */}
+            <button
+              className="mt-8 px-6 py-2 rounded-full bg-gray-200 text-pink-600 font-semibold shadow hover:bg-gray-300 transition-all duration-200"
+              onClick={() => setShowLetterOverlay(false)}
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+        {/* Download Buttons (not scaled) */}
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex gap-4 z-50">
+          <button
+            className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow hover:from-pink-500 hover:to-pink-700 transition-all text-sm"
+            onClick={handleDownloadLetter}
+          >
+            Download Letter
+          </button>
+          <button
+            className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow hover:from-pink-500 hover:to-pink-700 transition-all text-sm"
+            onClick={handleDownloadLetterAndStrip}
+          >
+            Download Letter + Strip
+          </button>
+          <button
+            className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow hover:from-pink-500 hover:to-pink-700 transition-all text-sm"
+            onClick={handleDownload}
+          >
+            Download Strip
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const goToStep = (nextStep) => {
     setCardAnim("card-exit");
     setTimeout(() => {
@@ -356,6 +1094,7 @@ export default function StripDesign({ images, designs, onBack, captured = [] }) 
     }, 400);
   };
 
+  // Normal strip design UI
   return (
     <div className={`flex flex-col md:flex-row w-full min-h-screen justify-center items-center gap-8 ${colors.background} overflow-x-hidden`}>
       <div className="flex-shrink-0">
@@ -401,6 +1140,47 @@ export default function StripDesign({ images, designs, onBack, captured = [] }) 
                 selectedDesign={selectedDesign}
                 onSelectDesign={setSelectedDesign}
               />
+              {/* Write Something! button for all supported layouts */}
+              {showLetterButton && (
+                <button
+                  className="mt-6 mb-2 px-6 py-2 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-semibold shadow hover:from-pink-500 hover:to-pink-700 transition-all duration-200 w-full"
+                  onClick={() => setShowWriteConfirm(true)}
+                >
+                  Write Something!
+                </button>
+              )}
+              {/* Confirmation popup */}
+              {showWriteConfirm && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative">
+                    <button
+                      className="absolute top-4 right-4 text-gray-400 hover:text-pink-500 text-2xl"
+                      onClick={() => setShowWriteConfirm(false)}
+                      aria-label="Close"
+                    >
+                      &times;
+                    </button>
+                    <h2 className="text-xl font-bold mb-4 text-pink-600">Do you want to write something on your letter?</h2>
+                    <div className="flex gap-4 justify-center mt-4">
+                      <button
+                        className="px-6 py-2 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-semibold shadow hover:from-pink-500 hover:to-pink-700 transition-all duration-200"
+                        onClick={() => {
+                          setShowWriteConfirm(false);
+                          setShowLetterOverlay(true);
+                        }}
+                      >
+                        Yes
+                      </button>
+                      <button
+                        className="px-6 py-2 rounded-full bg-gray-200 text-pink-600 font-semibold shadow hover:bg-gray-300 transition-all duration-200"
+                        onClick={() => setShowWriteConfirm(false)}
+                      >
+                        No
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="flex justify-between mt-4">
                 <BackButton onClick={() => goToStep("filters")}>Back</BackButton>
                 <NextButton onClick={downloadType === "gif" ? handleDownloadGif : handleDownload} disabled={!selectedDesign || isDownloading}>

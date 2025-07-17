@@ -30,7 +30,7 @@ function useLandscape() {
 }
 
 export default function CameraSetup({ layout, onBack, onDone }) {
-  const { colors, isDarkMode } = useTheme();
+  const { colors } = useTheme();
   const shots = layout?.shots || 1;
   const cameraRef = useRef(null);
   const [captured, setCaptured] = useState([]);
@@ -224,7 +224,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
             <span>
               <b>Rotate your device to landscape (horizontal) mode</b><br />
               for the best photobooth experience.<br /><br />
-              <span className={`text-base ${isDarkMode ? 'text-red-100' : 'text-pink-100'} font-normal`}>
+              <span className="text-base text-pink-100 font-normal">
                 This app is designed for wide screens.<br />
                 Please turn your phone or tablet sideways.
               </span>
@@ -241,9 +241,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
           style={{
             width: 60,
             height: 60,
-            background: isDarkMode 
-              ? 'radial-gradient(circle at 30% 30%, #dc2626, #991b1b)' 
-              : 'radial-gradient(circle at 30% 30%, #f472b6, #a21caf)',
+            background: 'radial-gradient(circle at 30% 30%, #f472b6, #a21caf)',
             borderRadius: '50%',
             boxShadow: '0 4px 24px rgba(0,0,0,0.2)',
             display: 'flex',
@@ -264,13 +262,13 @@ export default function CameraSetup({ layout, onBack, onDone }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative animate-fade-in">
             <button
-              className={`absolute top-4 right-4 text-gray-400 hover:${colors.primaryHover} text-2xl`}
+              className={`absolute top-4 right-4 text-gray-400 hover:text-pink-500 text-2xl`}
               onClick={() => setShowInstructions(false)}
               aria-label="Close"
             >
               &times;
             </button>
-            <h2 className={`text-2xl font-bold mb-4 ${colors.text}`}>How to Use the Photobooth</h2>
+            <h2 className={`text-2xl font-bold mb-4 text-gray-800`}>How to Use the Photobooth</h2>
             <ul className="list-disc pl-6 space-y-2 text-gray-700">
               <li>Click <b>Start Photo Session</b> to begin.</li>
               <li>Follow the countdown and pose for each shot.</li>

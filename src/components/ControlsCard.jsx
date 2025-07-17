@@ -83,7 +83,7 @@ export default function ControlsCard({
                   : "border-transparent"
               }`}
             >
-              <div className={`w-32 h-28 flex items-center justify-center ${colors.isDarkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg overflow-hidden`}>
+              <div className={`w-32 h-28 flex items-center justify-center bg-gray-50 rounded-lg overflow-hidden`}>
                 <img
                   src={design}
                   alt={`Design ${start + i + 1}`}
@@ -105,7 +105,7 @@ export default function ControlsCard({
                 &lt;
               </button>
             )}
-            <span className={`text-sm ${colors.isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            <span className={`text-sm text-gray-600`}>
               {page + 1} of {pageCount}
             </span>
             {page < pageCount - 1 && (
@@ -136,5 +136,3 @@ export default function ControlsCard({
     );
   }
 }
-
-// I want the filters to mimic their real use, like the cool effect just make the image hues of blue, that shouldn't happen, also is it possible to center the card accordingly to the frame layout bceause for 3 , 4 and 6 shot, the frames are quite large making the controls card look small
