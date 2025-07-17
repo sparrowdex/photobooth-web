@@ -108,7 +108,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
   const cardRef = useRef(null);
   const [showWriteConfirm, setShowWriteConfirm] = useState(false);
   // Resizable state
-  const aspectRatio = 5 / 7;
+  const [cardAspectRatio, setCardAspectRatio] = useState(5 / 7);
   const minWidth = 250;
   const maxWidth = 700;
   const [cardSize, setCardSize] = useState({ width: 500, height: 700 });
@@ -126,6 +126,17 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
   const [rotatingTextBox, setRotatingTextBox] = useState(false);
   const [rotateStartAngle, setRotateStartAngle] = useState(0);
   const [rotateStartValue, setRotateStartValue] = useState(0);
+  // Add state for text box size (width and height)
+  const minTextBoxWidth = 120;
+  const maxTextBoxWidth = cardSize.width * 0.95;
+  const minTextBoxHeight = 40;
+  const maxTextBoxHeight = cardSize.height * 0.95;
+  const [textBoxSize, setTextBoxSize] = useState({
+    width: cardSize.width * 0.8,
+    height: Math.max(120, cardSize.height * 0.5),
+  });
+  const [resizingTextBox, setResizingTextBox] = useState(false);
+  const [resizeTextBoxStart, setResizeTextBoxStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
   // Text box drag handlers
   function handleTextBoxDragStart(e) {
@@ -145,13 +156,13 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     let dy = clientY - textBoxMouseStart.y;
     let newX = textBoxDragStart.x + dx;
     let newY = textBoxDragStart.y + dy;
-    // Constrain within card
-    const boxW = cardSize.width * 0.8;
-    const boxH = Math.max(120, cardSize.height * 0.28);
-    const minX = -cardSize.width / 2 + boxW / 2 + 12;
-    const maxX = cardSize.width / 2 - boxW / 2 - 12;
-    const minY = -cardSize.height / 2 + boxH / 2 + 12;
-    const maxY = cardSize.height / 2 - boxH / 2 - 12;
+    // Clamp so the text box stays fully inside the card
+    const boxW = textBoxSize.width;
+    const boxH = textBoxSize.height;
+    const minX = -cardSize.width / 2 + boxW / 2;
+    const maxX = cardSize.width / 2 - boxW / 2;
+    const minY = -cardSize.height / 2 + boxH / 2;
+    const maxY = cardSize.height / 2 - boxH / 2;
     newX = Math.max(minX, Math.min(maxX, newX));
     newY = Math.max(minY, Math.min(maxY, newY));
     setTextBoxPos({ x: newX, y: newY });
@@ -529,7 +540,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
       // Calculate text area dimensions
       const fontSize = Math.max(18, cardSize.width * 0.056);
       const textAreaWidth = cardSize.width * 0.8;
-      const textAreaHeight = Math.max(120, cardSize.height * 0.28);
+      const textAreaHeight = Math.max(120, cardSize.height * 0.9); // Fill 90% of card height
       const textBoxCenterX = cardSize.width / 2 + textBoxPos.x;
       const textBoxCenterY = cardSize.height / 2 + textBoxPos.y;
       // Rotate context by textBoxRotation around the text box center
@@ -738,7 +749,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       const textAreaWidth = cardSize.width * 0.8 * scale;
-      const textAreaHeight = Math.max(120, cardSize.height * 0.28) * scale;
+      const textAreaHeight = Math.max(120, cardSize.height * 0.9) * scale; // Fill 90% of card height
       // Use user-chosen position (scaled)
       const textBoxCenterX = (cardSize.width * scale) / 2 + textBoxPos.x * scale;
       const textBoxCenterY = (cardSize.height * scale) / 2 + textBoxPos.y * scale;
@@ -788,15 +799,30 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
   const calculateMaxChars = () => {
     const fontSize = Math.max(18, cardSize.width * 0.056); // unscaled
     const textAreaWidth = cardSize.width * 0.8 * 0.9; // Account for padding
-    const textAreaHeight = Math.max(120, cardSize.height * 0.28) * 0.8;
+    const maxBoxHeight = Math.max(120, cardSize.height * 0.9) * 0.8;
     const lineHeight = fontSize * 1.2;
-    const maxLines = Math.floor(textAreaHeight / lineHeight);
     const avgCharsPerLine = Math.floor(textAreaWidth / (fontSize * 0.6)); // Approximate chars per line
+    const maxLines = Math.floor(maxBoxHeight / lineHeight);
     return maxLines * avgCharsPerLine;
   };
 
   const maxChars = calculateMaxChars();
   const isTextOverflowing = letterText.length > maxChars;
+
+  // Update text box size when card size changes
+  useEffect(() => {
+    setTextBoxSize({
+      width: cardSize.width * 0.8,
+      height: Math.max(120, cardSize.height * 0.5),
+    });
+  }, [cardSize.width, cardSize.height]);
+
+  // Update font size and character limit based on text box size
+  const fontSize = Math.max(18, textBoxSize.width * 0.07);
+  const lineHeight = fontSize * 1.2;
+  const avgCharsPerLine = Math.floor(textBoxSize.width * 0.9 / (fontSize * 0.6));
+  const maxLines = Math.floor(textBoxSize.height / lineHeight);
+  const dynamicTextBoxHeight = maxLines * lineHeight;
 
   // Drag/resize handlers
   function handleDragStart(e) {
@@ -840,7 +866,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
     let delta = clientX - resizeStart.x;
     let newWidth = Math.max(minWidth, Math.min(maxWidth, resizeStart.width + delta));
-    let newHeight = Math.round(newWidth / aspectRatio);
+    let newHeight = Math.round(newWidth / cardAspectRatio);
     setCardSize({ width: newWidth, height: newHeight });
   }
   function handleResizeEnd() {
@@ -848,6 +874,52 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
       setDragMode(null);
       document.body.style.cursor = '';
     }
+  }
+
+  // Handle text box resize start
+  function handleTextBoxResizeStart(e) {
+    e.stopPropagation();
+    setResizingTextBox(true);
+    const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+    setResizeTextBoxStart({
+      x: clientX,
+      y: clientY,
+      width: textBoxSize.width,
+      height: textBoxSize.height,
+    });
+    document.body.style.cursor = 'nwse-resize';
+  }
+  function handleTextBoxResize(e) {
+    if (!resizingTextBox) return;
+    const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+    let newWidth = resizeTextBoxStart.width + (clientX - resizeTextBoxStart.x);
+    let newHeight = resizeTextBoxStart.height + (clientY - resizeTextBoxStart.y);
+    // Clamp so the box stays inside the card at its current position
+    const centerX = cardSize.width / 2 + textBoxPos.x;
+    const centerY = cardSize.height / 2 + textBoxPos.y;
+    const maxW = Math.min(maxTextBoxWidth, centerX * 2, (cardSize.width - centerX) * 2);
+    const maxH = Math.min(maxTextBoxHeight, centerY * 2, (cardSize.height - centerY) * 2);
+    newWidth = Math.max(minTextBoxWidth, Math.min(maxW, newWidth));
+    newHeight = Math.max(minTextBoxHeight, Math.min(maxH, newHeight));
+    setTextBoxSize({ width: newWidth, height: newHeight });
+  }
+  function handleTextBoxResizeEnd() {
+    if (resizingTextBox) {
+      setResizingTextBox(false);
+      document.body.style.cursor = '';
+    }
+  }
+
+  // 1. Card (letter overlay) resize handle at bottom-right of the card
+  // Card resize handle (bottom-right of the card, outside the text box)
+  function handleCardResizeStart(e) {
+    e.stopPropagation();
+    setDragMode('resize');
+    const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+    setResizeStart({ x: clientX, width: cardSize.width, height: cardSize.height });
+    document.body.style.cursor = 'nwse-resize';
   }
 
   // Shuffle animation keyframes
@@ -864,11 +936,65 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     document.head.appendChild(style);
   }
 
-  // Determine the correct letter background image based on layout
-  let letterBgImage = '/photobooth-web/designs/1shot-letter.jpg';
-  if (images.length === 3) letterBgImage = '/photobooth-web/designs/3shot-letter.jpg';
-  if (images.length === 4) letterBgImage = '/photobooth-web/designs/4shot-letter.jpg';
-  if (images.length === 6) letterBgImage = '/photobooth-web/designs/6shot-letter.jpg';
+  // Letter backgrounds for each layout
+  const letterDesignsByLayout = {
+    1: [
+      '/photobooth-web/designs/1shot-letter.jpg',
+      '/photobooth-web/designs/1shot-letter2.jpg',
+    ],
+    3: ['/photobooth-web/designs/3shot-letter.jpg',
+      '/photobooth-web/designs/3shot-letter2.jpg'
+    ],
+    4: ['/photobooth-web/designs/4shot-letter.jpg',
+      '/photobooth-web/designs/4shot-letter2.jpg'
+    ],
+    6: ['/photobooth-web/designs/6shot-letter.jpg',
+      '/photobooth-web/designs/6shot-letter2.jpg'
+    ],
+  };
+  const currentLayout = images.length;
+  const availableLetterDesigns = letterDesignsByLayout[currentLayout] || [];
+  const [letterDesignIdx, setLetterDesignIdx] = useState(0);
+  let letterBgImage = availableLetterDesigns[letterDesignIdx] || availableLetterDesigns[0] || '/photobooth-web/designs/1shot-letter.jpg';
+
+  // Letter frame mappings (fixed dimensions for each design)
+  const letterFrameMappings = {
+    '/photobooth-web/designs/1shot-letter.jpg': { width: 500, height: 700 },
+    '/photobooth-web/designs/1shot-letter2.jpg': { width: 600, height: 400 },
+    '/photobooth-web/designs/3shot-letter.jpg': { width: 500, height: 800 },
+    '/photobooth-web/designs/3shot-letter2.jpg': { width: 540, height: 800 },
+    '/photobooth-web/designs/4shot-letter.jpg': { width: 500, height: 900 },
+    '/photobooth-web/designs/4shot-letter2.jpg': { width: 800, height: 500 },
+    '/photobooth-web/designs/6shot-letter.jpg': { width: 480, height: 800 },
+    '/photobooth-web/designs/6shot-letter2.jpg': { width: 730, height: 500 },
+  };
+
+  // When the user switches letter designs, set card size to the mapping's dimensions
+  useEffect(() => {
+    if (!letterBgImage) return;
+    const mapping = letterFrameMappings[letterBgImage];
+    if (mapping) {
+      setCardSize({ width: mapping.width, height: mapping.height });
+      setCardAspectRatio(mapping.width / mapping.height);
+    }
+  }, [letterBgImage]);
+
+  // Next design handler
+  const handleNextLetterDesign = () => {
+    setLetterDesignIdx((idx) => (idx + 1) % availableLetterDesigns.length);
+  };
+
+  // Previous design handler
+  const handlePrevLetterDesign = () => {
+    setLetterDesignIdx((idx) => (idx - 1 + availableLetterDesigns.length) % availableLetterDesigns.length);
+  };
+
+  // Fix Go Back button (move to download row, always works)
+  const handleGoBack = () => {
+    setShowLetterOverlay(false);
+    setLetterDesignIdx(0);
+    setStep("filters");
+  };
 
   // Smoother, springy card animation
   const cardStyle = {
@@ -911,16 +1037,35 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     }
   }
 
+  // Disclaimer modal state
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const handleShowDisclaimer = () => setShowDisclaimer(true);
+  const handleCloseDisclaimer = () => setShowDisclaimer(false);
+
+  // Wrap all download handlers to show disclaimer after download
+  const handleDownloadWithDisclaimer = async (...args) => {
+    await handleDownloadLetter(...args);
+    handleShowDisclaimer();
+  };
+  const handleDownloadLetterAndStripWithDisclaimer = async (...args) => {
+    await handleDownloadLetterAndStrip(...args);
+    handleShowDisclaimer();
+  };
+  const handleDownloadStripWithDisclaimer = async (...args) => {
+    await handleDownload(...args);
+    handleShowDisclaimer();
+  };
+
   if (showLetterOverlay) {
     return (
       <div
         className="w-full min-h-screen flex items-center justify-center relative bg-transparent"
         style={{ overflow: 'auto' }}
-        onMouseMove={e => { handleDrag(e); handleResize(e); handleTextBoxDrag(e); handleTextBoxRotate(e); }}
-        onMouseUp={() => { handleDragEnd(); handleResizeEnd(); handleTextBoxDragEnd(); handleTextBoxRotateEnd(); }}
-        onMouseLeave={() => { handleDragEnd(); handleResizeEnd(); handleTextBoxDragEnd(); handleTextBoxRotateEnd(); }}
-        onTouchMove={e => { handleDrag(e); handleResize(e); handleTextBoxDrag(e); handleTextBoxRotate(e); }}
-        onTouchEnd={() => { handleDragEnd(); handleResizeEnd(); handleTextBoxDragEnd(); handleTextBoxRotateEnd(); }}
+        onMouseMove={e => { handleDrag(e); handleResize(e); handleTextBoxDrag(e); handleTextBoxRotate(e); handleTextBoxResize(e); }}
+        onMouseUp={() => { handleDragEnd(); handleResizeEnd(); handleTextBoxDragEnd(); handleTextBoxRotateEnd(); handleTextBoxResizeEnd(); }}
+        onMouseLeave={() => { handleDragEnd(); handleResizeEnd(); handleTextBoxDragEnd(); handleTextBoxRotateEnd(); handleTextBoxResizeEnd(); }}
+        onTouchMove={e => { handleDrag(e); handleResize(e); handleTextBoxDrag(e); handleTextBoxRotate(e); handleTextBoxResize(e); }}
+        onTouchEnd={() => { handleDragEnd(); handleResizeEnd(); handleTextBoxDragEnd(); handleTextBoxRotateEnd(); handleTextBoxResizeEnd(); }}
       >
         {/* Only scale the preview, not the buttons */}
         <div style={{ transform: `scale(${previewScale})`, transformOrigin: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
@@ -949,6 +1094,56 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
               handleDragStart(e);
             }}
           >
+            {/* Previous (<) Button for more designs */}
+            {availableLetterDesigns.length > 1 && (
+              <button
+                onClick={handlePrevLetterDesign}
+                style={{
+                  position: 'absolute',
+                  top: 16,
+                  left: 16,
+                  zIndex: 40,
+                  background: 'rgba(255,255,255,0.9)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: 36,
+                  height: 36,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                  cursor: 'pointer',
+                }}
+                aria-label="Previous Letter Design"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#b91c1c" strokeWidth="2"><polyline points="12 4 6 10 12 16" /></svg>
+              </button>
+            )}
+            {/* Next (>) Button for more designs */}
+            {availableLetterDesigns.length > 1 && (
+              <button
+                onClick={handleNextLetterDesign}
+                style={{
+                  position: 'absolute',
+                  top: 16,
+                  right: 16,
+                  zIndex: 40,
+                  background: 'rgba(255,255,255,0.9)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: 36,
+                  height: 36,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                  cursor: 'pointer',
+                }}
+                aria-label="Next Letter Design"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#b91c1c" strokeWidth="2"><polyline points="8 4 14 10 8 16" /></svg>
+              </button>
+            )}
             {/* Draggable & Rotatable Text Box */}
             <div
               data-text-box
@@ -957,8 +1152,8 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
                 left: '50%',
                 top: '50%',
                 transform: `translate(-50%, -50%) translate(${textBoxPos.x}px, ${textBoxPos.y}px) rotate(${textBoxRotation}deg)`,
-                width: '80%',
-                height: Math.max(120, cardSize.height * 0.28),
+                width: textBoxSize.width,
+                height: dynamicTextBoxHeight,
                 cursor: dragTextBox ? 'move' : 'grab',
                 zIndex: 20,
                 display: 'flex',
@@ -979,7 +1174,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
                   background: isTextOverflowing ? 'rgba(255,200,200,0.8)' : 'rgba(255,255,255,0.7)',
                   border: isTextOverflowing ? '2px solid #ff6b6b' : 'none',
                   borderRadius: 16,
-                  fontSize: Math.max(18, cardSize.width * 0.056),
+                  fontSize: fontSize,
                   fontFamily: 'Pacifico, cursive',
                   color: isTextOverflowing ? '#d63031' : '#b91c1c',
                   textAlign: 'center',
@@ -1027,12 +1222,36 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
               }}>
                 {letterText.length}/{maxChars}
               </div>
+              {/* Resize Handle */}
+              {/* 2. Text box resize handle at bottom-right of the text box */}
+              <div
+                data-resize-handle
+                onMouseDown={e => { e.stopPropagation(); handleTextBoxResizeStart(e); }}
+                onTouchStart={e => { e.stopPropagation(); handleTextBoxResizeStart(e); }}
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  bottom: 0,
+                  width: 24,
+                  height: 24,
+                  background: 'rgba(255,255,255,0.7)',
+                  borderTopLeftRadius: 8,
+                  cursor: 'nwse-resize',
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  justifyContent: 'flex-end',
+                  zIndex: 50, // highest
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                  userSelect: 'none',
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2"><polyline points="16 20 20 20 20 16" /><line x1="14" y1="20" x2="20" y2="14" /></svg>
+              </div>
             </div>
-            {/* Resize Handle */}
+            {/* Card (letter overlay) resize handle (bottom-right of card, outside text box) */}
             <div
-              data-resize-handle
-              onMouseDown={handleResizeStart}
-              onTouchStart={handleResizeStart}
+              onMouseDown={handleCardResizeStart}
+              onTouchStart={handleCardResizeStart}
               style={{
                 position: 'absolute',
                 right: 0,
@@ -1045,7 +1264,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
                 display: 'flex',
                 alignItems: 'flex-end',
                 justifyContent: 'flex-end',
-                zIndex: 10,
+                zIndex: 35, // between card and text box handle
                 boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
                 userSelect: 'none',
               }}
@@ -1053,35 +1272,89 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2"><polyline points="16 20 20 20 20 16" /><line x1="14" y1="20" x2="20" y2="14" /></svg>
             </div>
             {/* Go Back Button */}
-            <button
-              className="mt-8 px-6 py-2 rounded-full bg-gray-200 text-pink-600 font-semibold shadow hover:bg-gray-300 transition-all duration-200"
-              onClick={() => setShowLetterOverlay(false)}
-            >
-              Go Back
-            </button>
           </div>
         </div>
-        {/* Download Buttons (not scaled) */}
+        {/* Download Buttons (not scaled) and Go Back */}
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex gap-4 z-50">
           <button
             className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow hover:from-pink-500 hover:to-pink-700 transition-all text-sm"
-            onClick={handleDownloadLetter}
+            onClick={handleDownloadWithDisclaimer}
           >
             Download Letter
           </button>
           <button
             className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow hover:from-pink-500 hover:to-pink-700 transition-all text-sm"
-            onClick={handleDownloadLetterAndStrip}
+            onClick={handleDownloadLetterAndStripWithDisclaimer}
           >
             Download Letter + Strip
           </button>
           <button
             className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow hover:from-pink-500 hover:to-pink-700 transition-all text-sm"
-            onClick={handleDownload}
+            onClick={handleDownloadStripWithDisclaimer}
           >
             Download Strip
           </button>
+          <BackButton onClick={handleGoBack} className="!bg-pink-200 !text-white-600 !font-bold !shadow hover:!bg-pink-300 transition-all text-sm">
+            Go Back
+          </BackButton>
         </div>
+        {/* Confirmation popup */}
+        {showWriteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative">
+              <button
+                className="absolute top-4 right-4 text-gray-400 hover:text-pink-500 text-2xl"
+                onClick={() => setShowWriteConfirm(false)}
+                aria-label="Close"
+              >
+                &times;
+              </button>
+              <h2 className="text-xl font-bold mb-4 text-pink-600">Do you want to write something on your letter?</h2>
+              <div className="flex gap-4 justify-center mt-4">
+                <button
+                  className="px-6 py-2 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-semibold shadow hover:from-pink-500 hover:to-pink-700 transition-all duration-200"
+                  onClick={() => {
+                    setShowWriteConfirm(false);
+                    setShowLetterOverlay(true);
+                  }}
+                >
+                  Yes
+                </button>
+                <button
+                  className="px-6 py-2 rounded-full bg-gray-200 text-pink-600 font-semibold shadow hover:bg-gray-300 transition-all duration-200"
+                  onClick={() => setShowWriteConfirm(false)}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Disclaimer Modal */}
+        {showDisclaimer && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative text-center">
+              <button
+                className="absolute top-4 right-4 text-gray-400 hover:text-pink-500 text-2xl"
+                onClick={handleCloseDisclaimer}
+                aria-label="Close"
+              >
+                &times;
+              </button>
+              <h2 className="text-xl font-bold mb-4 text-pink-600">Sharing Tip</h2>
+              <p className="mb-4 text-gray-700">
+                To keep the background transparent, share this image as a <b>file</b> (e.g., in Docs or as an attachment), not as a photo.<br/>
+                Some apps (like WhatsApp) may add a white background if sent as a photo.
+              </p>
+              <button
+                className="mt-2 px-6 py-2 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-semibold shadow hover:from-pink-500 hover:to-pink-700 transition-all duration-200"
+                onClick={handleCloseDisclaimer}
+              >
+                Got it!
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

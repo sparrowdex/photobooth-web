@@ -123,6 +123,7 @@ export default function Photobooth({ onBack }) {
             }}
             onDownload={handleDownload}
             showLetterOverlay={true}
+            setShowLetterOverlay={setShowLetterOverlay}
           />
         </AppLayout>
       );

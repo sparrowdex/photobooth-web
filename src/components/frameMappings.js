@@ -240,24 +240,6 @@ const frameMappings = {
   //     { left: 280, top: 677, width: 230, height: 290, borderRadius: 24 },
   //   ],
   // },
-  "1shot-letter": {
-    frame: "/photobooth-web/designs/1shot-letter.png",
-    frameWidth: 500,
-    frameHeight: 600,
-    windows: [
-      { left: 100, top: 120, width: 300, height: 300, borderRadius: 24 }
-    ],
-    textArea: {
-      left: 60,
-      top: 450,
-      width: 380,
-      height: 180,
-      fontSize: 32,
-      color: "#b91c1c",
-      fontFamily: "Pacifico, cursive",
-      textAlign: "center"
-    }
-  },
   // Add more mappings as needed
   //when you want to check if images are aligned properly set borderRadius:71
 };
