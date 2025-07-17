@@ -551,30 +551,33 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
       ctx.fillStyle = '#b91c1c';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      // Word wrap logic
+      // Preserve line breaks and spaces
       const maxWidth = textAreaWidth * 0.9;
-      const words = letterText.split(' ');
-      let line = '';
-      const lines = [];
-      for (let n = 0; n < words.length; n++) {
-        const testLine = line + words[n] + ' ';
-        const metrics = ctx.measureText(testLine);
-        const testWidth = metrics.width;
-        if (testWidth > maxWidth && n > 0) {
-          lines.push(line);
-          line = words[n] + ' ';
-        } else {
-          line = testLine;
+      const rawLines = letterText.split('\n');
+      const wrappedLines = [];
+      for (let rawLine of rawLines) {
+        let line = '';
+        const words = rawLine.split(' ');
+        for (let n = 0; n < words.length; n++) {
+          const testLine = line + (line ? ' ' : '') + words[n];
+          const metrics = ctx.measureText(testLine.replace(/ /g, '\u00A0'));
+          const testWidth = metrics.width;
+          if (testWidth > maxWidth && n > 0) {
+            wrappedLines.push(line);
+            line = words[n];
+          } else {
+            line = testLine;
+          }
         }
+        wrappedLines.push(line);
       }
-      lines.push(line);
       const lineHeight = fontSize * 1.2;
       const textAreaTop = textBoxCenterY - textAreaHeight / 2;
       const startY = textAreaTop + (textAreaHeight * 0.1);
       const maxLines = Math.floor((textAreaHeight * 0.8) / lineHeight);
-      for (let i = 0; i < Math.min(lines.length, maxLines); i++) {
+      for (let i = 0; i < Math.min(wrappedLines.length, maxLines); i++) {
         const y = startY + (i * lineHeight);
-        ctx.fillText(lines[i].trim(), textBoxCenterX, y);
+        ctx.fillText(wrappedLines[i].replace(/ /g, '\u00A0'), textBoxCenterX, y);
       }
       ctx.restore();
     }
@@ -758,29 +761,32 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
       ctx.translate(textBoxCenterX, textBoxCenterY);
       ctx.rotate((textBoxRotation * Math.PI) / 180);
       ctx.translate(-textBoxCenterX, -textBoxCenterY);
-      // Word wrap logic
-      const words = letterText.split(' ');
-      let line = '';
-      const lines = [];
+      // Preserve line breaks and spaces
       const maxWidth = textAreaWidth * 0.9;
-      for (let n = 0; n < words.length; n++) {
-        const testLine = line + words[n] + ' ';
-        const metrics = ctx.measureText(testLine);
-        const testWidth = metrics.width;
-        if (testWidth > maxWidth && n > 0) {
-          lines.push(line);
-          line = words[n] + ' ';
-        } else {
-          line = testLine;
+      const rawLines = letterText.split('\n');
+      const wrappedLines = [];
+      for (let rawLine of rawLines) {
+        let line = '';
+        const words = rawLine.split(' ');
+        for (let n = 0; n < words.length; n++) {
+          const testLine = line + (line ? ' ' : '') + words[n];
+          const metrics = ctx.measureText(testLine.replace(/ /g, '\u00A0'));
+          const testWidth = metrics.width;
+          if (testWidth > maxWidth && n > 0) {
+            wrappedLines.push(line);
+            line = words[n];
+          } else {
+            line = testLine;
+          }
         }
+        wrappedLines.push(line);
       }
-      lines.push(line);
       const lineHeight = fontSize * 1.2;
       const startY = textAreaTop + (textAreaHeight * 0.1);
       const maxLines = Math.floor((textAreaHeight * 0.8) / lineHeight);
-      for (let i = 0; i < Math.min(lines.length, maxLines); i++) {
+      for (let i = 0; i < Math.min(wrappedLines.length, maxLines); i++) {
         const y = startY + (i * lineHeight);
-        ctx.fillText(lines[i].trim(), textBoxCenterX, y);
+        ctx.fillText(wrappedLines[i].replace(/ /g, '\u00A0'), textBoxCenterX, y);
       }
     }
     ctx.restore();
