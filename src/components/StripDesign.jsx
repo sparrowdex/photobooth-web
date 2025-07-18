@@ -6,6 +6,7 @@ import NextButton from "./NextButton";
 import frameMappings from "./frameMappings";
 import { parseGIF, decompressFrames } from 'gifuct-js';
 import { useTheme } from "./ThemeContext";
+import gifshot from 'gifshot';
 
 // PAGINATED DESIGN GRID
 function DesignGrid({ designs, selectedDesign, onSelectDesign }) {
@@ -472,7 +473,6 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
       frames.push(canvas.toDataURL("image/png"));
     }
     // Use gifshot to create the final GIF
-    const gifshot = await import('gifshot');
     gifshot.createGIF({
       images: frames,
       gifWidth: width,
