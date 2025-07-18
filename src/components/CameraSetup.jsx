@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Camera } from "react-camera-pro";
 import BackButton from "./BackButton";
 import { useTheme } from "./ThemeContext";
+import gifshot from 'gifshot';
 
 // Orientation detection using Screen Orientation API (with fallback)
 function useLandscape() {
@@ -78,9 +79,6 @@ export default function CameraSetup({ layout, onBack, onDone }) {
         const blob = new Blob(chunks, { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
         
-        // Dynamically import gifshot
-        const gifshot = (await import('gifshot')).default;
-        
         gifshot.createGIF({
           video: [url],
           gifWidth: 640,
@@ -137,9 +135,6 @@ export default function CameraSetup({ layout, onBack, onDone }) {
           // Create GIF from video
           const videoBlob = new Blob(chunks, { type: "video/webm" });
           const url = URL.createObjectURL(videoBlob);
-          
-          // Dynamically import gifshot
-          const gifshot = (await import('gifshot')).default;
           
           gifshot.createGIF({
             video: [url],
