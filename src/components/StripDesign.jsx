@@ -935,10 +935,21 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     80% { opacity: 1; z-index: 100; transform: translate(-50%, -55%) scale(1.02) rotate(-7deg); }
     100% { opacity: 1; z-index: 100; transform: translate(-50%, -50%) scale(1) rotate(-6deg); }
   }`;
+
+  // Walking animation keyframes
+  const walkAnim = `@keyframes walk {
+    0% { transform: translate(-100px, 50px) rotate(-5deg); }
+    20% { transform: translate(100px, 80px) rotate(3deg); }
+    40% { transform: translate(300px, 120px) rotate(-2deg); }
+    60% { transform: translate(500px, 90px) rotate(4deg); }
+    80% { transform: translate(700px, 60px) rotate(-3deg); }
+    100% { transform: translate(900px, 50px) rotate(-5deg); }
+  }`;
+
   if (typeof document !== 'undefined' && !document.getElementById('cardShuffleAnim')) {
     const style = document.createElement('style');
     style.id = 'cardShuffleAnim';
-    style.innerHTML = shuffleAnim;
+    style.innerHTML = shuffleAnim + walkAnim;
     document.head.appendChild(style);
   }
 
@@ -1048,6 +1059,80 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
   const handleShowDisclaimer = () => setShowDisclaimer(true);
   const handleCloseDisclaimer = () => setShowDisclaimer(false);
 
+  // Instruction helper modal state
+  const [showInstructions, setShowInstructions] = useState(false);
+  const handleShowInstructions = () => setShowInstructions(true);
+  const handleCloseInstructions = () => setShowInstructions(false);
+
+  // --- Freely moving folder animation state ---
+  const [folderPos, setFolderPos] = useState({ x: 200, y: 200 });
+  const folderVelRef = useRef({ vx: 1.2, vy: 1.1 });
+  const folderRef = useRef();
+  const animRef = useRef();
+  const folderSize = 120;
+  // Overlap state
+  const [folderBehind, setFolderBehind] = useState(false);
+
+  // Helper: check overlap between two rectangles
+  function isOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+    return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+  }
+
+  // Update folderBehind state on every animation frame
+  useEffect(() => {
+    if (!showLetterOverlay || showInstructions) return;
+    let raf;
+    function animate() {
+      setFolderPos(pos => {
+        let { x, y } = pos;
+        let { vx, vy } = folderVelRef.current;
+        // Get window size
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        // Calculate next position
+        let nextX = x + vx;
+        let nextY = y + vy;
+        // Bounce off window edges only
+        if (nextX + folderSize >= w || nextX <= 0) vx = -vx;
+        if (nextY + folderSize >= h || nextY <= 0) vy = -vy;
+        folderVelRef.current = { vx, vy };
+        // Move
+        return { x: x + vx, y: y + vy };
+      });
+      raf = requestAnimationFrame(animate);
+      animRef.current = raf;
+    }
+    raf = requestAnimationFrame(animate);
+    animRef.current = raf;
+    return () => cancelAnimationFrame(animRef.current);
+    // eslint-disable-next-line
+  }, [showLetterOverlay, showInstructions]);
+
+  // Opacity state for folder overlap
+  useEffect(() => {
+    // Folder bounding box
+    const fx = folderPos.x;
+    const fy = folderPos.y;
+    const fw = folderSize;
+    const fh = folderSize;
+    // Letter card bounding box (centered in preview, offset by cardPos)
+    const previewCenterX = window.innerWidth / 2;
+    const previewCenterY = window.innerHeight / 2;
+    const cardW = cardSize.width * previewScale;
+    const cardH = cardSize.height * previewScale;
+    const cardX = previewCenterX - cardW / 2 + cardPos.x * previewScale;
+    const cardY = previewCenterY - cardH / 2 + cardPos.y * previewScale;
+    // Photo strip bounding box (left of preview area)
+    const stripW = selectedDesign && frameMappings[selectedDesign.key] ? frameMappings[selectedDesign.key].frameWidth * previewScale : 400 * previewScale;
+    const stripH = selectedDesign && frameMappings[selectedDesign.key] ? frameMappings[selectedDesign.key].frameHeight * previewScale : 600 * previewScale;
+    const stripX = previewCenterX - stripW / 2 - cardW / 2 - 40 * previewScale; // estimate left of card
+    const stripY = previewCenterY - stripH / 2;
+    // Check overlap
+    const overlapCard = isOverlap(fx, fy, fw, fh, cardX, cardY, cardW, cardH);
+    const overlapStrip = isOverlap(fx, fy, fw, fh, stripX, stripY, stripW, stripH);
+    setFolderBehind(overlapCard || overlapStrip);
+  }, [folderPos, cardSize, cardPos, selectedDesign, previewScale, showLetterOverlay, showInstructions]);
+
   // Wrap all download handlers to show disclaimer after download
   const handleDownloadWithDisclaimer = async (...args) => {
     await handleDownloadLetter(...args);
@@ -1073,8 +1158,36 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
         onTouchMove={e => { handleDrag(e); handleResize(e); handleTextBoxDrag(e); handleTextBoxRotate(e); handleTextBoxResize(e); }}
         onTouchEnd={() => { handleDragEnd(); handleResizeEnd(); handleTextBoxDragEnd(); handleTextBoxRotateEnd(); handleTextBoxResizeEnd(); }}
       >
+        {/* Freely moving folder image in the background */}
+        { !showInstructions && (
+        <div
+          ref={folderRef}
+          onClick={folderBehind ? undefined : handleShowInstructions}
+          style={{
+            position: 'fixed',
+            left: folderPos.x,
+            top: folderPos.y,
+            width: folderSize,
+            height: folderSize,
+            zIndex: folderBehind ? 2 : 1200,
+            cursor: folderBehind ? 'default' : 'pointer',
+            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))',
+            transition: 'transform 0.2s, opacity 0.3s',
+            opacity: folderBehind ? 0 : 0.85,
+            userSelect: 'none',
+            pointerEvents: folderBehind ? 'none' : 'auto',
+          }}
+        >
+          <img
+            src="/photobooth-web/images/folder.png"
+            alt="Instructions"
+            style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
+            draggable={false}
+          />
+        </div>
+        )}
         {/* Only scale the preview, not the buttons */}
-        <div style={{ transform: `scale(${previewScale})`, transformOrigin: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+        <div style={{ transform: `scale(${previewScale})`, transformOrigin: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', position: 'relative' }}>
           {/* Photo preview always visible on the left */}
           <div className="flex-shrink-0 z-10">
             <PhotoLayoutCard
@@ -1358,6 +1471,66 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
               >
                 Got it!
               </button>
+            </div>
+          </div>
+        )}
+        {/* Instructions Modal */}
+        {showInstructions && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full relative">
+              <button
+                className="absolute top-4 right-4 text-gray-400 hover:text-pink-500 text-2xl"
+                onClick={handleCloseInstructions}
+                aria-label="Close"
+              >
+                &times;
+              </button>
+              <div className="text-center mb-6">
+                <img 
+                  src="/photobooth-web/images/folder.png" 
+                  alt="Instructions" 
+                  className="w-16 h-16 mx-auto mb-4"
+                />
+                <h2 className="text-2xl font-bold mb-4 text-pink-600">How to Use "Write Something"</h2>
+              </div>
+              <div className="space-y-4 text-left">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center text-pink-600 font-bold text-sm flex-shrink-0 mt-1">1</div>
+                  <div>
+                    <h3 className="font-semibold text-gray-800">Type Your Message</h3>
+                    <p className="text-gray-600">Click on the text area and type your personal message. The text will automatically wrap to fit the card.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center text-pink-600 font-bold text-sm flex-shrink-0 mt-1">2</div>
+                  <div>
+                    <h3 className="font-semibold text-gray-800">Move & Resize</h3>
+                    <p className="text-gray-600">Drag the text box to position it anywhere on the card. Use the resize handle to make it bigger or smaller.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center text-pink-600 font-bold text-sm flex-shrink-0 mt-1">3</div>
+                  <div>
+                    <h3 className="font-semibold text-gray-800">Rotate Text</h3>
+                    <p className="text-gray-600">Use the rotation handle (↻) to tilt your text at any angle for a creative look.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center text-pink-600 font-bold text-sm flex-shrink-0 mt-1">4</div>
+                  <div>
+                    <h3 className="font-semibold text-gray-800">Download</h3>
+                    <p className="text-gray-600">Choose to download just the letter, the photo strip, or both combined!</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 text-center">
+                <button
+                  className="px-6 py-2 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-semibold shadow hover:from-pink-500 hover:to-pink-700 transition-all duration-200"
+                  onClick={handleCloseInstructions}
+                >
+                  Got it!
+                </button>
+              </div>
             </div>
           </div>
         )}
