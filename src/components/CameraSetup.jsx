@@ -2,7 +2,6 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Camera } from "react-camera-pro";
 import BackButton from "./BackButton";
 import { useTheme } from "./ThemeContext";
-import gifshot from 'gifshot';
 
 // Orientation detection using Screen Orientation API (with fallback)
 function useLandscape() {
@@ -30,6 +29,20 @@ function useLandscape() {
   return !isPortrait; // returns true if landscape
 }
 
+// Helper: detect mobile device
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => {
+      setIsMobile(/Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent));
+    };
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  return isMobile;
+}
+
 export default function CameraSetup({ layout, onBack, onDone }) {
   const { colors } = useTheme();
   const shots = layout?.shots || 1;
@@ -44,6 +57,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
   const [isRecording, setIsRecording] = useState(false);
 
   const isLandscape = useLandscape();
+  const isMobile = useIsMobile();
 
   // Set camera size on mount and resize
   useEffect(() => {
@@ -78,6 +92,9 @@ export default function CameraSetup({ layout, onBack, onDone }) {
       mediaRecorder.onstop = async () => {
         const blob = new Blob(chunks, { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
+        
+        // Dynamically import gifshot
+        const gifshot = (await import('gifshot')).default;
         
         gifshot.createGIF({
           video: [url],
@@ -135,6 +152,9 @@ export default function CameraSetup({ layout, onBack, onDone }) {
           // Create GIF from video
           const videoBlob = new Blob(chunks, { type: "video/webm" });
           const url = URL.createObjectURL(videoBlob);
+          
+          // Dynamically import gifshot
+          const gifshot = (await import('gifshot')).default;
           
           gifshot.createGIF({
             video: [url],
@@ -198,35 +218,44 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     setStep("countdown");
   };
 
+  // Camera container style
+  let cameraContainerStyle = {
+    width: cameraSize.width,
+    height: cameraSize.height,
+    position: "relative",
+    background: "transparent",
+    borderRadius: "12px",
+    overflow: "hidden"
+  };
+  // If mobile and portrait, fit to screen (3:4 aspect)
+  if (isMobile && !isLandscape) {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    // Fit width to 98vw, height to 3:4 aspect, but not more than 98vh
+    let width = Math.min(vw * 0.98, vh * 0.75);
+    let height = width * (4/3);
+    if (height > vh * 0.98) {
+      height = vh * 0.98;
+      width = height * (3/4);
+    }
+    cameraContainerStyle = {
+      width,
+      height,
+      position: "relative",
+      background: "transparent",
+      borderRadius: "12px",
+      overflow: "hidden",
+      margin: '0 auto',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    };
+  }
+
   return (
     <div className="flex flex-col items-center relative min-h-screen bg-transparent overflow-x-hidden">
       {/* Orientation Prompt */}
-      {!isLandscape && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80">
-          <div className={`flex flex-col items-center text-white text-center text-2xl p-8 rounded-xl ${colors.button} shadow-2xl`}>
-            <svg
-              width="48"
-              height="48"
-              viewBox="0 0 48 48"
-              fill="none"
-              className="mb-4"
-              aria-hidden="true"
-            >
-              <rect x="8" y="16" width="32" height="16" rx="3" fill="#fff" fillOpacity="0.2"/>
-              <rect x="8" y="16" width="32" height="16" rx="3" stroke="#fff" strokeWidth="2"/>
-              <path d="M36 32l4 4M40 32l-4 4" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-            <span>
-              <b>Rotate your device to landscape (horizontal) mode</b><br />
-              for the best photobooth experience.<br /><br />
-              <span className="text-base text-pink-100 font-normal">
-                This app is designed for wide screens.<br />
-                Please turn your phone or tablet sideways.
-              </span>
-            </span>
-          </div>
-        </div>
-      )}
+      {/* Removed: Landscape mode disclaimer */}
 
       {/* Floating Help Circle */}
       {!showInstructions && (
@@ -289,14 +318,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
       {/* Camera Container - fixed size to prevent shrinking */}
       <div className="mb-4 flex justify-center">
         <div 
-          style={{ 
-            width: cameraSize.width,
-            height: cameraSize.height,
-            position: "relative", 
-            background: "transparent",
-            borderRadius: "12px",
-            overflow: "hidden"
-          }}
+          style={cameraContainerStyle}
         >
           <Camera
             ref={cameraRef}

@@ -90,6 +90,20 @@ function drawImageCover(ctx, img, x, y, w, h) {
   ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
 }
 
+// Helper: detect mobile device
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => {
+      setIsMobile(/Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent));
+    };
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  return isMobile;
+}
+
 export default function StripDesign({ images, designs, onBack, captured = [], showLetterOverlay, setShowLetterOverlay }) {
   const { colors } = useTheme();
   const [step, setStep] = useState("filters");
@@ -138,6 +152,9 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
   });
   const [resizingTextBox, setResizingTextBox] = useState(false);
   const [resizeTextBoxStart, setResizeTextBoxStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+
+  const isMobile = useIsMobile();
+  const isPortrait = window.innerHeight > window.innerWidth;
 
   // Text box drag handlers
   function handleTextBoxDragStart(e) {
@@ -460,8 +477,10 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
               ctx.closePath();
               ctx.clip();
             }
+            ctx.filter = photoFilters[i] || "none";
             drawImageCover(ctx, img, win.left, win.top, win.width, win.height);
             ctx.restore();
+            ctx.filter = "none";
             resolve();
           };
         });
@@ -1134,20 +1153,59 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
   }, [folderPos, cardSize, cardPos, selectedDesign, previewScale, showLetterOverlay, showInstructions]);
 
   // Wrap all download handlers to show disclaimer after download
-  const handleDownloadWithDisclaimer = async (...args) => {
-    await handleDownloadLetter(...args);
-    handleShowDisclaimer();
+  const handleDownloadWithDisclaimer = (...args) => {
+    handleDownloadLetter(...args);
+    setTimeout(handleShowDisclaimer, 150);
   };
-  const handleDownloadLetterAndStripWithDisclaimer = async (...args) => {
-    await handleDownloadLetterAndStrip(...args);
-    handleShowDisclaimer();
+  const handleDownloadLetterAndStripWithDisclaimer = (...args) => {
+    handleDownloadLetterAndStrip(...args);
+    setTimeout(handleShowDisclaimer, 150);
   };
-  const handleDownloadStripWithDisclaimer = async (...args) => {
-    await handleDownload(...args);
-    handleShowDisclaimer();
+  const handleDownloadStripWithDisclaimer = (...args) => {
+    handleDownload(...args);
+    setTimeout(handleShowDisclaimer, 150);
   };
 
   if (showLetterOverlay) {
+    // Responsive card style for mobile portrait
+    let mobileCardStyle = { ...cardStyle };
+    let mobileTextBoxStyle = {};
+    let mobileButtonRowStyle = {};
+    if (isMobile && isPortrait) {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      // Card: fit to 96vw, max 90vh
+      let width = Math.min(vw * 0.96, cardSize.width);
+      let height = Math.round(width * (cardSize.height / cardSize.width));
+      if (height > vh * 0.9) {
+        height = vh * 0.9;
+        width = Math.round(height * (cardSize.width / cardSize.height));
+      }
+      mobileCardStyle = {
+        ...cardStyle,
+        width,
+        height,
+        left: '50%',
+        top: '50%',
+        maxWidth: '96vw',
+        maxHeight: '90vh',
+        minWidth: 200,
+        minHeight: 200,
+      };
+      mobileTextBoxStyle = {
+        width: '90%',
+        minWidth: 120,
+        maxWidth: '98vw',
+        fontSize: Math.max(16, width * 0.06),
+      };
+      mobileButtonRowStyle = {
+        flexDirection: 'column',
+        gap: '8px',
+        width: '100%',
+        alignItems: 'center',
+        marginTop: 12,
+      };
+    }
     return (
       <div
         className="w-full min-h-screen flex items-center justify-center relative bg-transparent"
@@ -1158,36 +1216,8 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
         onTouchMove={e => { handleDrag(e); handleResize(e); handleTextBoxDrag(e); handleTextBoxRotate(e); handleTextBoxResize(e); }}
         onTouchEnd={() => { handleDragEnd(); handleResizeEnd(); handleTextBoxDragEnd(); handleTextBoxRotateEnd(); handleTextBoxResizeEnd(); }}
       >
-        {/* Freely moving folder image in the background */}
-        { !showInstructions && (
-        <div
-          ref={folderRef}
-          onClick={folderBehind ? undefined : handleShowInstructions}
-          style={{
-            position: 'fixed',
-            left: folderPos.x,
-            top: folderPos.y,
-            width: folderSize,
-            height: folderSize,
-            zIndex: folderBehind ? 2 : 1200,
-            cursor: folderBehind ? 'default' : 'pointer',
-            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))',
-            transition: 'transform 0.2s, opacity 0.3s',
-            opacity: folderBehind ? 0 : 0.85,
-            userSelect: 'none',
-            pointerEvents: folderBehind ? 'none' : 'auto',
-          }}
-        >
-          <img
-            src="/photobooth-web/images/folder.png"
-            alt="Instructions"
-            style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
-            draggable={false}
-          />
-        </div>
-        )}
         {/* Only scale the preview, not the buttons */}
-        <div style={{ transform: `scale(${previewScale})`, transformOrigin: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', position: 'relative' }}>
+        <div style={{ transform: `scale(${previewScale})`, transformOrigin: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
           {/* Photo preview always visible on the left */}
           <div className="flex-shrink-0 z-10">
             <PhotoLayoutCard
@@ -1200,7 +1230,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
           {/* Draggable & Resizable & Rotatable Letter Card Overlay */}
           <div
             ref={cardRef}
-            style={cardStyle}
+            style={isMobile && isPortrait ? mobileCardStyle : cardStyle}
             onMouseDown={e => {
               // Only start drag if not on resize handle
               if (e.target.dataset && e.target.dataset.resizeHandle) return;
@@ -1266,7 +1296,18 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
             {/* Draggable & Rotatable Text Box */}
             <div
               data-text-box
-              style={{
+              style={isMobile && isPortrait ? { ...mobileTextBoxStyle, ...{
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                transform: `translate(-50%, -50%) translate(${textBoxPos.x}px, ${textBoxPos.y}px) rotate(${textBoxRotation}deg)`,
+                height: dynamicTextBoxHeight,
+                cursor: dragTextBox ? 'move' : 'grab',
+                zIndex: 20,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }} : {
                 position: 'absolute',
                 left: '50%',
                 top: '50%',
@@ -1394,29 +1435,58 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
           </div>
         </div>
         {/* Download Buttons (not scaled) and Go Back */}
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex gap-4 z-50">
-          <button
-            className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow hover:from-pink-500 hover:to-pink-700 transition-all text-sm"
-            onClick={handleDownloadWithDisclaimer}
-          >
-            Download Letter
-          </button>
-          <button
-            className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow hover:from-pink-500 hover:to-pink-700 transition-all text-sm"
-            onClick={handleDownloadLetterAndStripWithDisclaimer}
-          >
-            Download Letter + Strip
-          </button>
-          <button
-            className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow hover:from-pink-500 hover:to-pink-700 transition-all text-sm"
-            onClick={handleDownloadStripWithDisclaimer}
-          >
-            Download Strip
-          </button>
-          <BackButton onClick={handleGoBack} className="!bg-pink-200 !text-white-600 !font-bold !shadow hover:!bg-pink-300 transition-all text-sm">
-            Go Back
-          </BackButton>
-        </div>
+        {isMobile && isPortrait ? (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 flex flex-row flex-wrap gap-2 z-50 w-full px-2 justify-center" style={{...mobileButtonRowStyle, flexDirection: 'row', gap: '6px', padding: 0, margin: 0}}>
+            <button
+              className="px-2 py-1 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow text-xs min-w-[90px]"
+              onClick={handleDownloadWithDisclaimer}
+              style={{fontSize: '13px', padding: '8px 10px'}}
+            >
+              Download Letter
+            </button>
+            <button
+              className="px-2 py-1 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow text-xs min-w-[90px]"
+              onClick={handleDownloadLetterAndStripWithDisclaimer}
+              style={{fontSize: '13px', padding: '8px 10px'}}
+            >
+              Download Letter + Strip
+            </button>
+            <button
+              className="px-2 py-1 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow text-xs min-w-[90px]"
+              onClick={handleDownloadStripWithDisclaimer}
+              style={{fontSize: '13px', padding: '8px 10px'}}
+            >
+              Download Strip
+            </button>
+            <BackButton onClick={handleGoBack} className="!bg-pink-200 !text-white-600 !font-bold !shadow hover:!bg-pink-300 transition-all text-xs px-2 py-1 min-w-[90px]" style={{fontSize: '13px', padding: '8px 10px'}}>
+              Go Back
+            </BackButton>
+          </div>
+        ) : (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex gap-4 z-50">
+            <button
+              className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow hover:from-pink-500 hover:to-pink-700 transition-all text-sm"
+              onClick={handleDownloadWithDisclaimer}
+            >
+              Download Letter
+            </button>
+            <button
+              className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow hover:from-pink-500 hover:to-pink-700 transition-all text-sm"
+              onClick={handleDownloadLetterAndStripWithDisclaimer}
+            >
+              Download Letter + Strip
+            </button>
+            <button
+              className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow hover:from-pink-500 hover:to-pink-700 transition-all text-sm"
+              onClick={handleDownloadStripWithDisclaimer}
+            >
+              Download Strip
+            </button>
+            <BackButton onClick={handleGoBack} className="!bg-pink-200 !text-white-600 !font-bold !shadow hover:!bg-pink-300 transition-all text-sm">
+              Go Back
+            </BackButton>
+          </div>
+        )}
         {/* Confirmation popup */}
         {showWriteConfirm && (
           <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
@@ -1547,8 +1617,27 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
   };
 
   // Normal strip design UI
+  let mainContainerStyle = {};
+  if (isMobile && isPortrait) {
+    mainContainerStyle = {
+      width: '100vw',
+      minHeight: '100vh',
+      maxWidth: '100vw',
+      overflowX: 'hidden',
+      padding: '0',
+      margin: '0',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      background: colors.background,
+    };
+  }
+
   return (
-    <div className={`flex flex-col md:flex-row w-full min-h-screen justify-center items-center gap-8 ${colors.background} overflow-x-hidden`}>
+    <div className={`flex flex-col md:flex-row w-full min-h-screen justify-center items-center gap-8 ${colors.background} overflow-x-hidden`}
+      style={mainContainerStyle}
+    >
       <div className="flex-shrink-0">
         <PhotoLayoutCard
           images={images}
