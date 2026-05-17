@@ -8,9 +8,11 @@ export default function FrameLayout({ images, mapping, filters }) {
     <div
       style={{
         position: "relative",
-        width: frameWidth,
-        height: frameHeight,
-        background: "#fff"
+        width: "100%",
+        maxWidth: `${frameWidth}px`,
+        aspectRatio: `${frameWidth} / ${frameHeight}`,
+        background: "#fff",
+        margin: "0 auto",
       }}
     >
       {windows.map((win, idx) => (
@@ -18,10 +20,10 @@ export default function FrameLayout({ images, mapping, filters }) {
           key={idx}
           style={{
             position: "absolute",
-            left: win.left,
-            top: win.top,
-            width: win.width,
-            height: win.height,
+            left: `${(win.left / frameWidth) * 100}%`,
+            top: `${(win.top / frameHeight) * 100}%`,
+            width: `${(win.width / frameWidth) * 100}%`,
+            height: `${(win.height / frameHeight) * 100}%`,
             overflow: "hidden",
             borderRadius: win.borderRadius || 0,
             zIndex: 5,
@@ -51,11 +53,9 @@ export default function FrameLayout({ images, mapping, filters }) {
         src={frame}
         alt="Frame Overlay"
         style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
+          position: "relative",
           width: "100%",
-          height: "100%",
+          height: "auto",
           pointerEvents: "none",
           zIndex: 10,
           display: "block"
