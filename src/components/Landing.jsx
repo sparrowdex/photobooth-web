@@ -18,7 +18,7 @@ export default function Landing({ onStart }) {
   }, []);
 
   return (
-    <div className={`${colors.animatedBg} min-h-screen flex items-center justify-center relative transition-all duration-1000`}>
+    <div className={`${colors.animatedBg} min-h-screen flex items-center justify-center relative transition-all duration-1000 overflow-hidden px-4 md:px-0`}>
       {/* Shooting Star */}
       <div
         style={{
@@ -89,11 +89,11 @@ export default function Landing({ onStart }) {
         </div>
 
         {/* Main Card */}
-        <div className={`relative ${colors.card} bg-opacity-90 rounded-3xl ${colors.shadow} px-12 py-14 flex flex-col items-center`}>
-          <h1 className={`text-5xl font-pacifico mb-4 ${colors.text} drop-shadow-lg`}>
+        <div className={`relative ${colors.card} bg-opacity-90 rounded-3xl ${colors.shadow} px-6 py-10 md:px-12 md:py-14 flex flex-col items-center text-center w-full max-w-[90vw] md:max-w-xl`}>
+          <h1 className={`text-4xl md:text-5xl font-pacifico mb-4 ${colors.text} drop-shadow-lg`}>
             Welcome to Photobooth
           </h1>
-          <p className={`text-xl mb-8 ${colors.textSecondary}`}>
+          <p className={`text-lg md:text-xl mb-8 ${colors.textSecondary}`}>
             Create, customize, and download your own photo strips!
           </p>
           <button
@@ -140,5 +140,3 @@ export default function Landing({ onStart }) {
     </div>
   );
 }
-
-

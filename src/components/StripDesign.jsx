@@ -6,7 +6,7 @@ import NextButton from "./NextButton";
 import frameMappings from "./frameMappings";
 import { parseGIF, decompressFrames } from 'gifuct-js';
 import { useTheme } from "./ThemeContext";
-import gifshot from 'gifshot';
+import { gsap } from 'gsap';
 
 // PAGINATED DESIGN GRID
 function DesignGrid({ designs, selectedDesign, onSelectDesign }) {
@@ -104,6 +104,11 @@ function useIsMobile() {
   return isMobile;
 }
 
+// Helper: check overlap between two rectangles
+function isOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+  return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+}
+
 export default function StripDesign({ images, designs, onBack, captured = [], showLetterOverlay, setShowLetterOverlay }) {
   const { colors } = useTheme();
   const [step, setStep] = useState("filters");
@@ -152,9 +157,39 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
   });
   const [resizingTextBox, setResizingTextBox] = useState(false);
   const [resizeTextBoxStart, setResizeTextBoxStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  // Add scale state for card
+  const [cardScale, setCardScale] = useState(1);
+  const [stripScale, setStripScale] = useState(1);
 
   const isMobile = useIsMobile();
   const isPortrait = window.innerHeight > window.innerWidth;
+
+  // Track pointer down time/position for click vs drag
+  const [pointerDown, setPointerDown] = useState({ time: 0, x: 0, y: 0 });
+  const [didDrag, setDidDrag] = useState(false);
+
+  function handleCardMouseDown(e) {
+    if (e.target !== e.currentTarget) return;
+    setPointerDown({ time: Date.now(), x: e.clientX, y: e.clientY });
+    setDidDrag(false);
+    handleDragStart(e);
+  }
+  function handleCardMouseMove(e) {
+    if (e.target !== e.currentTarget) return;
+    if (Math.abs(e.clientX - pointerDown.x) > 8 || Math.abs(e.clientY - pointerDown.y) > 8) {
+      setDidDrag(true);
+    }
+  }
+  function handleCardMouseUp(e) {
+    if (e.target !== e.currentTarget) return;
+    const dt = Date.now() - pointerDown.time;
+    const dx = Math.abs(e.clientX - pointerDown.x);
+    const dy = Math.abs(e.clientY - pointerDown.y);
+    if (dt < 200 && dx < 8 && dy < 8 && !didDrag) {
+      shuffleCardToFront();
+    }
+    handleDragEnd();
+  }
 
   // Text box drag handlers
   function handleTextBoxDragStart(e) {
@@ -431,13 +466,24 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     );
     // Find the minimum number of frames across all GIFs
     const minFrames = Math.min(...gifFramesArr.map((arr) => arr.length));
+    
+    // Dynamically import gifenc
+    const { GIFEncoder, quantize, applyPalette } = await import('gifenc');
+    const gif = GIFEncoder();
+
     // For each frame index, composite the GIFs into the strip
-    const frames = [];
     for (let frameIdx = 0; frameIdx < minFrames; frameIdx++) {
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext("2d");
+
+      // Draw a solid white background for standard (non-transparent) GIFs
+      if (downloadType !== "gif-transparent") {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, width, height);
+      }
+
       // Draw each GIF frame in its mapped window using drawImageCover
       for (let i = 0; i < mapping.windows.length; i++) {
         const win = mapping.windows[i];
@@ -489,26 +535,48 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
       if (overlayImg && overlayImg.complete) {
         ctx.drawImage(overlayImg, 0, 0, width, height);
       }
-      frames.push(canvas.toDataURL("image/png"));
-    }
-    // Use gifshot to create the final GIF
-    gifshot.createGIF({
-      images: frames,
-      gifWidth: width,
-      gifHeight: height,
-      frameDuration: 0.2,
-      progressCallback: () => {},
-    }, function(obj) {
-      setIsDownloading(false);
-      if (!obj.error) {
-        const link = document.createElement("a");
-        link.href = obj.image;
-        link.download = "photobooth-strip.gif";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      
+      // Extract image data and encode it to the GIF
+      const { data } = ctx.getImageData(0, 0, width, height);
+      
+      let palette, index, transparentIndex;
+      if (downloadType === "gif-transparent") {
+        // Quantize the colors and preserve alpha channels for transparent GIFs
+        palette = quantize(data, 256, { format: 'rgba4444', clearAlpha: true, clearAlphaThreshold: 50 });
+        index = applyPalette(data, palette, 'rgba4444');
+        transparentIndex = palette.findIndex(c => c[3] === 0);
+      } else {
+        // Standard high-quality quantization for normal opaque GIFs
+        palette = quantize(data, 256, { format: 'rgb565' });
+        index = applyPalette(data, palette, 'rgb565');
+        transparentIndex = -1;
       }
-    });
+      
+      gif.writeFrame(index, width, height, {
+        palette,
+        transparent: transparentIndex >= 0,
+        transparentIndex: transparentIndex >= 0 ? transparentIndex : 0,
+        delay: 200, // 0.2 seconds per frame
+      });
+    }
+
+    // Export the finalized GIF
+    gif.finish();
+    const output = gif.bytes();
+    const blob = new Blob([output], { type: 'image/gif' });
+    const url = URL.createObjectURL(blob);
+    
+    setIsDownloading(false);
+    
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "photobooth-strip.gif";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up memory
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
   };
 
   // In handleDownloadLetter and handleDownloadLetterAndStrip, apply textBoxRotation to the text overlay
@@ -810,6 +878,10 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     }
     ctx.restore();
 
+    // Draw strip first, then card on top
+    await drawStrip(ctx);
+    await drawCard(ctx);
+
     // Download the composite canvas as PNG
     const dataUrl = canvas.toDataURL("image/png");
     const link = document.createElement("a");
@@ -892,7 +964,30 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     let delta = clientX - resizeStart.x;
     let newWidth = Math.max(minWidth, Math.min(maxWidth, resizeStart.width + delta));
     let newHeight = Math.round(newWidth / cardAspectRatio);
+    // Calculate center adjustment
+    const prevWidth = cardSize.width;
+    const prevHeight = cardSize.height;
+    const dx = (newWidth - prevWidth) / 2;
+    const dy = (newHeight - prevHeight) / 2;
     setCardSize({ width: newWidth, height: newHeight });
+    // Adjust cardPos so center stays fixed, but clamp to viewport
+    setCardPos(pos => {
+      let newX = pos.x + dx;
+      let newY = pos.y + dy;
+      // Clamp so card center stays in viewport
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const halfW = newWidth / 2;
+      const halfH = newHeight / 2;
+      // The card's center (relative to preview center) must stay within viewport bounds
+      const minX = -vw / 2 + halfW;
+      const maxX = vw / 2 - halfW;
+      const minY = -vh / 2 + halfH;
+      const maxY = vh / 2 - halfH;
+      newX = Math.max(minX, Math.min(maxX, newX));
+      newY = Math.max(minY, Math.min(maxY, newY));
+      return { x: newX, y: newY };
+    });
   }
   function handleResizeEnd() {
     if (dragMode === 'resize') {
@@ -919,8 +1014,8 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     if (!resizingTextBox) return;
     const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
     const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
-    let newWidth = resizeTextBoxStart.width + (clientX - resizeTextBoxStart.x);
-    let newHeight = resizeTextBoxStart.height + (clientY - resizeTextBoxStart.y);
+    let newWidth = resizingTextBox.width + (clientX - resizingTextBox.x);
+    let newHeight = resizingTextBox.height + (clientY - resizingTextBox.y);
     // Clamp so the box stays inside the card at its current position
     const centerX = cardSize.width / 2 + textBoxPos.x;
     const centerY = cardSize.height / 2 + textBoxPos.y;
@@ -975,34 +1070,34 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
   // Letter backgrounds for each layout
   const letterDesignsByLayout = {
     1: [
-      '/photobooth-web/designs/1shot-letter.jpg',
-      '/photobooth-web/designs/1shot-letter2.jpg',
+      '/designs/1shot-letter.jpg',
+      '/designs/1shot-letter2.jpg',
     ],
-    3: ['/photobooth-web/designs/3shot-letter.jpg',
-      '/photobooth-web/designs/3shot-letter2.jpg'
+    3: ['/designs/3shot-letter.jpg',
+      '/designs/3shot-letter2.jpg'
     ],
-    4: ['/photobooth-web/designs/4shot-letter.jpg',
-      '/photobooth-web/designs/4shot-letter2.jpg'
+    4: ['/designs/4shot-letter.jpg',
+      '/designs/4shot-letter2.jpg'
     ],
-    6: ['/photobooth-web/designs/6shot-letter.jpg',
-      '/photobooth-web/designs/6shot-letter2.jpg'
+    6: ['/designs/6shot-letter.jpg',
+      '/designs/6shot-letter2.jpg'
     ],
   };
   const currentLayout = images.length;
   const availableLetterDesigns = letterDesignsByLayout[currentLayout] || [];
   const [letterDesignIdx, setLetterDesignIdx] = useState(0);
-  let letterBgImage = availableLetterDesigns[letterDesignIdx] || availableLetterDesigns[0] || '/photobooth-web/designs/1shot-letter.jpg';
+  let letterBgImage = availableLetterDesigns[letterDesignIdx] || availableLetterDesigns[0] || '/designs/1shot-letter.jpg';
 
   // Letter frame mappings (fixed dimensions for each design)
   const letterFrameMappings = {
-    '/photobooth-web/designs/1shot-letter.jpg': { width: 500, height: 700 },
-    '/photobooth-web/designs/1shot-letter2.jpg': { width: 600, height: 400 },
-    '/photobooth-web/designs/3shot-letter.jpg': { width: 500, height: 800 },
-    '/photobooth-web/designs/3shot-letter2.jpg': { width: 540, height: 800 },
-    '/photobooth-web/designs/4shot-letter.jpg': { width: 500, height: 900 },
-    '/photobooth-web/designs/4shot-letter2.jpg': { width: 800, height: 500 },
-    '/photobooth-web/designs/6shot-letter.jpg': { width: 480, height: 800 },
-    '/photobooth-web/designs/6shot-letter2.jpg': { width: 730, height: 500 },
+    '/designs/1shot-letter.jpg': { width: 500, height: 700 },
+    '/designs/1shot-letter2.jpg': { width: 600, height: 400 },
+    '/designs/3shot-letter.jpg': { width: 500, height: 800 },
+    '/designs/3shot-letter2.jpg': { width: 540, height: 800 },
+    '/designs/4shot-letter.jpg': { width: 500, height: 900 },
+    '/designs/4shot-letter2.jpg': { width: 800, height: 500 },
+    '/designs/6shot-letter.jpg': { width: 480, height: 800 },
+    '/designs/6shot-letter2.jpg': { width: 730, height: 500 },
   };
 
   // When the user switches letter designs, set card size to the mapping's dimensions
@@ -1049,7 +1144,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     justifyContent: 'center',
     transition: dragMode ? 'none' : 'transform 1.1s cubic-bezier(.22,1.61,.36,1)',
     transform: showLetterOverlay
-      ? `translate(-50%, -50%) translate(${cardPos.x}px, ${cardPos.y}px) rotate(-6deg) scale(1)`
+      ? `translate(-50%, -50%) translate(${cardPos.x}px, ${cardPos.y}px) rotate(-6deg) scale(${cardScale})`
       : 'translate(-50%, -100vh) scale(0.8)',
     opacity: showLetterOverlay ? 1 : 0,
     cursor: dragMode === 'drag' ? 'grabbing' : dragMode === 'resize' ? 'nwse-resize' : 'grab',
@@ -1083,49 +1178,57 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
   const handleShowInstructions = () => setShowInstructions(true);
   const handleCloseInstructions = () => setShowInstructions(false);
 
-  // --- Freely moving folder animation state ---
+  // --- Improved GSAP Folder Animation ---
   const [folderPos, setFolderPos] = useState({ x: 200, y: 200 });
-  const folderVelRef = useRef({ vx: 1.2, vy: 1.1 });
-  const folderRef = useRef();
-  const animRef = useRef();
-  const folderSize = 120;
-  // Overlap state
+  const [folderPaused, setFolderPaused] = useState(false);
   const [folderBehind, setFolderBehind] = useState(false);
+  const folderRef = useRef();
+  const folderSize = 120;
+  const folderTimeline = useRef();
 
-  // Helper: check overlap between two rectangles
-  function isOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
-    return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+  // Helper: random direction and speed
+  function randomVelocity() {
+    const angle = Math.random() * 2 * Math.PI;
+    const speed = 1.2 + Math.random() * 1.2;
+    return { vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed };
   }
 
-  // Update folderBehind state on every animation frame
   useEffect(() => {
-    if (!showLetterOverlay || showInstructions) return;
-    let raf;
-    function animate() {
-      setFolderPos(pos => {
-        let { x, y } = pos;
-        let { vx, vy } = folderVelRef.current;
-        // Get window size
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        // Calculate next position
-        let nextX = x + vx;
-        let nextY = y + vy;
-        // Bounce off window edges only
-        if (nextX + folderSize >= w || nextX <= 0) vx = -vx;
-        if (nextY + folderSize >= h || nextY <= 0) vy = -vy;
-        folderVelRef.current = { vx, vy };
-        // Move
-        return { x: x + vx, y: y + vy };
-      });
-      raf = requestAnimationFrame(animate);
-      animRef.current = raf;
+    if (!showLetterOverlay || folderPaused) {
+      if (folderTimeline.current) folderTimeline.current.pause();
+      return;
     }
-    raf = requestAnimationFrame(animate);
-    animRef.current = raf;
-    return () => cancelAnimationFrame(animRef.current);
-    // eslint-disable-next-line
-  }, [showLetterOverlay, showInstructions]);
+    if (!folderRef.current) return;
+    let { x, y } = folderPos;
+    let { vx, vy } = randomVelocity();
+    const animate = () => {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      let nextX = x + vx;
+      let nextY = y + vy;
+      // Bounce off edges
+      if (nextX < 0 || nextX + folderSize > vw) vx = -vx;
+      if (nextY < 0 || nextY + folderSize > vh) vy = -vy;
+      x += vx;
+      y += vy;
+      setFolderPos({ x, y });
+      // Occasionally rotate or scale
+      if (Math.random() < 0.01) {
+        gsap.to(folderRef.current, { rotate: (Math.random() - 0.5) * 30, scale: 1 + (Math.random() - 0.5) * 0.2, duration: 0.5, yoyo: true, repeat: 1, ease: 'power1.inOut' });
+      }
+      folderTimeline.current = gsap.delayedCall(0.016, animate); // ~60fps
+    };
+    animate();
+    return () => {
+      if (folderTimeline.current) folderTimeline.current.kill();
+    };
+  }, [showLetterOverlay, folderPaused]);
+
+  // Pause/resume on click
+  function handleFolderClick() {
+    setShowInstructions(true);
+    setFolderPaused(true);
+  }
 
   // Opacity state for folder overlap
   useEffect(() => {
@@ -1158,13 +1261,51 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     setTimeout(handleShowDisclaimer, 150);
   };
   const handleDownloadLetterAndStripWithDisclaimer = (...args) => {
-    handleDownloadLetterAndStrip(...args);
-    setTimeout(handleShowDisclaimer, 150);
+    setTimeout(() => {
+      handleDownloadLetterAndStrip(...args);
+      handleShowDisclaimer();
+    }, 50); // small delay to ensure latest frontElement
   };
   const handleDownloadStripWithDisclaimer = (...args) => {
     handleDownload(...args);
     setTimeout(handleShowDisclaimer, 150);
   };
+
+  // Track which element is in front: 'card' or 'strip' - REMOVED for consistency
+  const stripRef = useRef();
+
+  // GSAP animation for letter card entrance/exit
+  useEffect(() => {
+    if (!cardRef.current) return;
+    if (showLetterOverlay) {
+      gsap.fromTo(
+        cardRef.current,
+        { scale: 0.7, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.7, ease: 'power3.out' }
+      );
+    } else {
+      gsap.to(cardRef.current, { scale: 0.7, opacity: 0, duration: 0.5, ease: 'power3.in' });
+    }
+  }, [showLetterOverlay]);
+
+  // GSAP pulse animation for card
+  const pulseCard = () => {
+    gsap.to({}, {
+      duration: 0.18,
+      onUpdate: function() { setCardScale(1.05); },
+      onComplete: () => {
+        gsap.to({}, {
+          duration: 0.18,
+          onUpdate: function() { setCardScale(1); }
+        });
+      }
+    });
+  };
+
+  // Resume animation when instructions modal is closed
+  useEffect(() => {
+    if (!showInstructions) setFolderPaused(false);
+  }, [showInstructions]);
 
   if (showLetterOverlay) {
     // Responsive card style for mobile portrait
@@ -1219,7 +1360,15 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
         {/* Only scale the preview, not the buttons */}
         <div style={{ transform: `scale(${previewScale})`, transformOrigin: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
           {/* Photo preview always visible on the left */}
-          <div className="flex-shrink-0 z-10">
+          <div
+            ref={stripRef}
+            className="flex-shrink-0"
+            style={{
+              zIndex: 100,
+              position: 'relative',
+              cursor: 'pointer',
+            }}
+          >
             <PhotoLayoutCard
               images={images}
               filters={photoFilters}
@@ -1230,69 +1379,24 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
           {/* Draggable & Resizable & Rotatable Letter Card Overlay */}
           <div
             ref={cardRef}
-            style={isMobile && isPortrait ? mobileCardStyle : cardStyle}
-            onMouseDown={e => {
-              // Only start drag if not on resize handle
-              if (e.target.dataset && e.target.dataset.resizeHandle) return;
-              if (e.target.dataset && e.target.dataset.textBox) return;
-              handleDragStart(e);
+            style={{
+              ...(isMobile && isPortrait ? mobileCardStyle : cardStyle),
+              zIndex: 200,
+              position: 'absolute',
+              cursor: 'pointer',
+              transform: `translate(-50%, -50%) translate(${cardPos.x}px, ${cardPos.y}px) rotate(-6deg)`
             }}
-            onTouchStart={e => {
-              if (e.target.dataset && e.target.dataset.resizeHandle) return;
-              if (e.target.dataset && e.target.dataset.textBox) return;
-              handleDragStart(e);
+            onClick={e => {
+              if (e.target.dataset && (e.target.dataset.textBox || e.target.dataset.resizeHandle)) return;
+              pulseCard();
             }}
+            onMouseDown={handleCardMouseDown}
+            onMouseMove={handleCardMouseMove}
+            onMouseUp={handleCardMouseUp}
+            onTouchStart={handleCardMouseDown}
+            onTouchMove={handleCardMouseMove}
+            onTouchEnd={handleCardMouseUp}
           >
-            {/* Previous (<) Button for more designs */}
-            {availableLetterDesigns.length > 1 && (
-              <button
-                onClick={handlePrevLetterDesign}
-                style={{
-                  position: 'absolute',
-                  top: 16,
-                  left: 16,
-                  zIndex: 40,
-                  background: 'rgba(255,255,255,0.9)',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: 36,
-                  height: 36,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                  cursor: 'pointer',
-                }}
-                aria-label="Previous Letter Design"
-              >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#b91c1c" strokeWidth="2"><polyline points="12 4 6 10 12 16" /></svg>
-              </button>
-            )}
-            {/* Next (>) Button for more designs */}
-            {availableLetterDesigns.length > 1 && (
-              <button
-                onClick={handleNextLetterDesign}
-                style={{
-                  position: 'absolute',
-                  top: 16,
-                  right: 16,
-                  zIndex: 40,
-                  background: 'rgba(255,255,255,0.9)',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: 36,
-                  height: 36,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                  cursor: 'pointer',
-                }}
-                aria-label="Next Letter Design"
-              >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#b91c1c" strokeWidth="2"><polyline points="8 4 14 10 8 16" /></svg>
-              </button>
-            )}
             {/* Draggable & Rotatable Text Box */}
             <div
               data-text-box
@@ -1320,8 +1424,8 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
-              onMouseDown={handleTextBoxDragStart}
-              onTouchStart={handleTextBoxDragStart}
+              onMouseDown={e => e.stopPropagation()}
+              onTouchStart={e => e.stopPropagation()}
             >
               <textarea
                 value={letterText}
@@ -1557,7 +1661,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
               </button>
               <div className="text-center mb-6">
                 <img 
-                  src="/photobooth-web/images/folder.png" 
+                  src="/images/folder.png" 
                   alt="Instructions" 
                   className="w-16 h-16 mx-auto mb-4"
                 />
@@ -1603,6 +1707,84 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
               </div>
             </div>
           </div>
+        )}
+        {/* Previous (<) Button for more designs */}
+        {availableLetterDesigns.length > 1 && (
+          <button
+            onClick={handlePrevLetterDesign}
+            style={{
+              position: 'absolute',
+              top: 16,
+              left: 16,
+              zIndex: 40,
+              background: 'rgba(255,255,255,0.9)',
+              border: 'none',
+              borderRadius: '50%',
+              width: 36,
+              height: 36,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+              cursor: 'pointer',
+            }}
+            aria-label="Previous Letter Design"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#b91c1c" strokeWidth="2"><polyline points="12 4 6 10 12 16" /></svg>
+          </button>
+        )}
+        {/* Next (>) Button for more designs */}
+        {availableLetterDesigns.length > 1 && (
+          <button
+            onClick={handleNextLetterDesign}
+            style={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              zIndex: 40,
+              background: 'rgba(255,255,255,0.9)',
+              border: 'none',
+              borderRadius: '50%',
+              width: 36,
+              height: 36,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+              cursor: 'pointer',
+            }}
+            aria-label="Next Letter Design"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#b91c1c" strokeWidth="2"><polyline points="8 4 14 10 8 16" /></svg>
+          </button>
+        )}
+        {/* Freely moving folder image in the background */}
+        { !showInstructions && (
+        <div
+          ref={folderRef}
+          onClick={handleFolderClick}
+          style={{
+            position: 'fixed',
+            left: folderPos.x,
+            top: folderPos.y,
+            width: folderSize,
+            height: folderSize,
+            zIndex: 2,
+            cursor: 'pointer',
+            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))',
+            transition: 'transform 0.2s, opacity 0.3s',
+            opacity: folderBehind ? 0 : 0.85,
+            userSelect: 'none',
+            pointerEvents: folderBehind ? 'none' : 'auto',
+          }}
+        >
+          <img
+              src="/images/folder.png"
+            alt="Instructions"
+            style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
+            draggable={false}
+          />
+        </div>
         )}
       </div>
     );
@@ -1657,6 +1839,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
             >
               <option value="photo">Download as Photo Strip (PNG)</option>
               <option value="gif">Download as GIF Strip (Animated)</option>
+              <option value="gif-transparent">Download as GIF Strip (Transparent)</option>
             </select>
           </div>
           {step === "filters" ? (
@@ -1669,7 +1852,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
               setSelectedDesign={setSelectedDesign}
               images={images}
               designs={designs}
-              onDownload={downloadType === "gif" ? handleDownloadGif : handleDownload}
+              onDownload={downloadType.startsWith("gif") ? handleDownloadGif : handleDownload}
               onBack={onBack}
               NextButton={NextButton}
               BackButton={BackButton}
@@ -1724,7 +1907,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
               )}
               <div className="flex justify-between mt-4">
                 <BackButton onClick={() => goToStep("filters")}>Back</BackButton>
-                <NextButton onClick={downloadType === "gif" ? handleDownloadGif : handleDownload} disabled={!selectedDesign || isDownloading}>
+                <NextButton onClick={downloadType.startsWith("gif") ? handleDownloadGif : handleDownload} disabled={!selectedDesign || isDownloading}>
                   {isDownloading ? "Preparing..." : "Download"}
                 </NextButton>
               </div>

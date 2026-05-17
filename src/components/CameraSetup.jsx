@@ -227,33 +227,21 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     borderRadius: "12px",
     overflow: "hidden"
   };
-  // If mobile and portrait, fit to screen (3:4 aspect)
+  // On mobile portrait, let the camera fill the container width and use a tall 3:4 aspect ratio
   if (isMobile && !isLandscape) {
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    // Fit width to 98vw, height to 3:4 aspect, but not more than 98vh
-    let width = Math.min(vw * 0.98, vh * 0.75);
-    let height = width * (4/3);
-    if (height > vh * 0.98) {
-      height = vh * 0.98;
-      width = height * (3/4);
-    }
     cameraContainerStyle = {
-      width,
-      height,
+      width: "100%",
+      aspectRatio: "3 / 4",
       position: "relative",
       background: "transparent",
       borderRadius: "12px",
       overflow: "hidden",
-      margin: '0 auto',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
+      margin: "0 auto",
     };
   }
 
   return (
-    <div className="flex flex-col items-center relative min-h-screen bg-transparent overflow-x-hidden">
+    <div className="flex flex-col items-center relative w-full min-h-screen bg-transparent overflow-x-hidden py-8 px-4">
       {/* Orientation Prompt */}
       {/* Removed: Landscape mode disclaimer */}
 
@@ -304,112 +292,128 @@ export default function CameraSetup({ layout, onBack, onDone }) {
         </div>
       )}
 
-      <BackButton className="mb-4 self-start" onClick={onBack}>
-        Go Back
-      </BackButton>
-      <div className="mb-4 text-xl font-semibold">
-        {step === "done"
-          ? "All Photos Captured!"
-          : step === "start"
-            ? "Ready to Start?"
-            : `Photo ${captured.length + 1} of ${shots}`}
-      </div>
+      <div className="w-full max-w-5xl flex flex-col items-center">
+        <BackButton className="mb-4 self-start md:absolute md:top-8 md:left-8 z-10" onClick={onBack}>
+          Go Back
+        </BackButton>
 
-      {/* Camera Container - fixed size to prevent shrinking */}
-      <div className="mb-4 flex justify-center">
-        <div 
-          style={cameraContainerStyle}
-        >
-          <Camera
-            ref={cameraRef}
-            aspectRatio={4 / 3}
-            facingMode="user"
-            numberOfCamerasCallback={() => {}}
-            errorMessages={{
-              noCameraAccessible: "No camera device accessible.",
-              permissionDenied: "Permission denied. Please refresh and give camera permission.",
-              switchCamera: "Unable to switch camera.",
-              canvas: "Canvas is not supported."
-            }}
-          />
-          {/* Countdown Overlay */}
-          {step === "countdown" && countdown !== null && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 z-20">
-              <span className="text-white text-7xl font-bold drop-shadow-lg">{countdown}</span>
+        <div className={`relative w-full flex flex-col items-center mt-4 md:mt-8 ${
+          isMobile ? `${colors.card} bg-opacity-70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white border-opacity-50 p-6 mt-2` : ''
+        }`}>
+          <div className={`mb-6 text-2xl md:text-4xl font-pacifico font-bold ${colors.text} drop-shadow-sm`}>
+            {step === "done"
+              ? "All Photos Captured!"
+              : step === "start"
+                ? "Ready to Start?"
+                : `Photo ${captured.length + 1} of ${shots}`}
+          </div>
+
+          {/* Camera Container - fixed size to prevent shrinking */}
+          <div className="mb-6 flex justify-center w-full">
+            <div 
+              style={cameraContainerStyle}
+              className="shadow-inner bg-black ring-4 ring-white ring-opacity-60 rounded-xl overflow-hidden relative"
+            >
+              <Camera
+                ref={cameraRef}
+                aspectRatio={isMobile && !isLandscape ? 3 / 4 : 4 / 3}
+                facingMode="user"
+                numberOfCamerasCallback={() => {}}
+                errorMessages={{
+                  noCameraAccessible: "No camera device accessible.",
+                  permissionDenied: "Permission denied. Please refresh and give camera permission.",
+                  switchCamera: "Unable to switch camera.",
+                  canvas: "Canvas is not supported."
+                }}
+              />
+              
+              {/* Viewfinder brackets */}
+              {step !== "start" && step !== "done" && (
+                <div className="absolute inset-4 md:inset-8 pointer-events-none z-10 opacity-70">
+                  <div className="absolute top-0 left-0 w-8 md:w-16 h-8 md:h-16 border-t-4 border-l-4 border-white rounded-tl-xl"></div>
+                  <div className="absolute top-0 right-0 w-8 md:w-16 h-8 md:h-16 border-t-4 border-r-4 border-white rounded-tr-xl"></div>
+                  <div className="absolute bottom-0 left-0 w-8 md:w-16 h-8 md:h-16 border-b-4 border-l-4 border-white rounded-bl-xl"></div>
+                  <div className="absolute bottom-0 right-0 w-8 md:w-16 h-8 md:h-16 border-b-4 border-r-4 border-white rounded-br-xl"></div>
+                </div>
+              )}
+
+              {/* Countdown Overlay */}
+              {step === "countdown" && countdown !== null && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 z-20 backdrop-blur-sm">
+                  <span className="text-white text-8xl md:text-9xl font-bold drop-shadow-2xl animate-ping">{countdown}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Start Photo Session button */}
+          {step === "start" && (
+            <button
+              className={`px-10 py-4 ${colors.button} text-white rounded-full shadow-lg transition-transform hover:scale-105 text-xl font-semibold`}
+              onClick={handleStartSession}
+            >
+              Start Photo Session
+            </button>
+          )}
+
+          {/* Take Photo button for each shot */}
+          {step === "preview" && captured.length < shots && (
+            <button
+              className={`px-10 py-4 ${colors.button} text-white rounded-full shadow-lg transition-transform hover:scale-105 text-xl font-semibold`}
+              onClick={handleStartCountdown}
+            >
+              Take Photo
+            </button>
+          )}
+
+          {/* Slots UI */}
+          <div className="flex flex-wrap justify-center gap-4 md:gap-6 mt-8 w-full">
+            {Array.from({ length: shots }).map((_, i) =>
+              captured[i] ? (
+                <div key={i} className="flex flex-col items-center relative group">
+                  <img
+                    src={captured[i].photo}
+                    alt={`Shot ${i + 1}`}
+                    className="w-20 h-28 md:w-28 md:h-36 object-cover rounded-xl shadow-md border-2 border-white"
+                  />
+                  {captured[i].gif && (
+                    <img
+                      src={captured[i].gif}
+                      alt={`GIF ${i + 1}`}
+                      className="w-10 h-10 md:w-14 md:h-14 object-cover rounded-lg shadow-sm border-2 border-white absolute -bottom-2 -right-2 bg-white"
+                    />
+                  )}
+                </div>
+              ) : (
+                <div
+                  key={i}
+                  className={`w-20 h-28 md:w-28 md:h-36 rounded-xl border-4 border-dashed ${colors.borderLight} flex items-center justify-center ${colors.textSecondary} text-2xl md:text-3xl font-bold opacity-70 bg-white bg-opacity-40 shadow-inner`}
+                >
+                  {i + 1}
+                </div>
+              )
+            )}
+          </div>
+
+          {/* Retake/Choose Strip Design after all photos */}
+          {step === "done" && (
+            <div className="flex flex-wrap justify-center gap-4 mt-8">
+              <button
+                className={`px-8 py-4 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-full shadow transition-transform hover:scale-105 text-lg font-semibold`}
+                onClick={handleStartOrRetake}
+              >
+                Retake
+              </button>
+              <button
+                className={`px-8 py-4 ${colors.button} text-white rounded-full shadow-lg transition-transform hover:scale-105 text-lg font-semibold`}
+                onClick={() => onDone(captured)}
+              >
+                Choose Strip Design
+              </button>
             </div>
           )}
         </div>
       </div>
-
-      {/* Start Photo Session button */}
-      {step === "start" && (
-        <button
-          className={`px-8 py-4 ${colors.button} text-white rounded-xl shadow transition text-xl font-semibold`}
-          onClick={handleStartSession}
-        >
-          Start Photo Session
-        </button>
-      )}
-
-      {/* Take Photo button for each shot */}
-      {step === "preview" && captured.length < shots && (
-        <button
-          className={`px-8 py-4 ${colors.button} text-white rounded-xl shadow transition text-xl font-semibold`}
-          onClick={handleStartCountdown}
-        >
-          Take Photo
-        </button>
-      )}
-
-      {/* Slots UI - transparent */}
-      <div className="flex gap-4 mt-8 bg-transparent">
-        {Array.from({ length: shots }).map((_, i) =>
-          captured[i] ? (
-            <div key={i} className="flex flex-col items-center">
-              <img
-                src={captured[i].photo}
-                alt={`Shot ${i + 1}`}
-                className="w-24 h-32 object-cover rounded-lg bg-transparent mb-2"
-                style={{ background: "transparent" }}
-              />
-              {captured[i].gif && (
-                <img
-                  src={captured[i].gif}
-                  alt={`GIF ${i + 1}`}
-                  className="w-16 h-16 object-cover rounded bg-gray-100"
-                  style={{ background: "transparent" }}
-                />
-              )}
-            </div>
-          ) : (
-            <div
-              key={i}
-              className={`w-24 h-32 rounded-lg border-2 ${colors.borderLight} flex items-center justify-center ${colors.textSecondary} text-3xl bg-transparent`}
-              style={{ background: "transparent" }}
-            >
-              {i + 1}
-            </div>
-          )
-        )}
-      </div>
-
-      {/* Retake/Choose Strip Design after all photos */}
-      {step === "done" && (
-        <div className="flex gap-4 mt-8">
-          <button
-            className={`px-8 py-4 ${colors.button} text-white rounded-xl shadow transition text-xl font-semibold`}
-            onClick={handleStartOrRetake}
-          >
-            Retake
-          </button>
-          <button
-            className={`px-8 py-4 ${colors.button} text-white rounded-xl shadow transition text-xl font-semibold`}
-            onClick={() => onDone(captured)}
-          >
-            Choose Strip Design
-          </button>
-        </div>
-      )}
     </div>
   );
 }
