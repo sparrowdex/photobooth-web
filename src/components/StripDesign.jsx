@@ -6,6 +6,8 @@ import NextButton from "./NextButton";
 import frameMappings from "./frameMappings";
 import { parseGIF, decompressFrames } from 'gifuct-js';
 import { useTheme } from "./ThemeContext";
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
 import { gsap } from 'gsap';
 
 // PAGINATED DESIGN GRID
@@ -107,6 +109,48 @@ function useIsMobile() {
 // Helper: check overlap between two rectangles
 function isOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
   return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+}
+
+// Helper function to handle downloads for both web and native
+const downloadFile = async (data, filename, showDisclaimer) => {
+  if (Capacitor.isNativePlatform()) {
+    // On mobile, save to the Photos gallery
+    try {
+      // For blobs, we need to convert to base64
+      let base64Data;
+      if (data instanceof Blob) {
+        base64Data = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(data);
+        });
+      } else {
+        base64Data = data; // Assumes data is already a data URL (base64)
+      }
+
+      await Filesystem.writeFile({
+        path: filename,
+        data: base64Data,
+        directory: Directory.Photos,
+      });
+      // Simple alert, can be replaced with a nicer UI Toast component
+      alert('Saved to Photos!');
+    } catch (e) {
+      console.error('Unable to save file', e);
+      alert(`Error saving file: ${e.message}`);
+    }
+  } else {
+    // On web, use the existing link-based download
+    const link = document.createElement('a');
+    link.href = data instanceof Blob ? URL.createObjectURL(data) : data;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    if (data instanceof Blob) setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+    if (showDisclaimer) showDisclaimer();
+  }
 }
 
 export default function StripDesign({ images, designs, onBack, captured = [], showLetterOverlay, setShowLetterOverlay }) {
@@ -430,13 +474,8 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
       }
     }
 
-    const dataUrl = canvas.toDataURL("image/png");
-    const link = document.createElement("a");
-    link.href = dataUrl;
-    link.download = "photobooth-strip.png";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const dataUrl = canvas.toDataURL('image/png');
+    await downloadFile(dataUrl, `photobooth-strip-${Date.now()}.png`, handleShowDisclaimer);
   };
 
   // GIF strip download logic (uses only the GIFs in captured and overlayImg)
@@ -564,19 +603,10 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     gif.finish();
     const output = gif.bytes();
     const blob = new Blob([output], { type: 'image/gif' });
-    const url = URL.createObjectURL(blob);
     
+    await downloadFile(blob, `photobooth-strip-${Date.now()}.gif`, handleShowDisclaimer);
+
     setIsDownloading(false);
-    
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "photobooth-strip.gif";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Clean up memory
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
   };
 
   // In handleDownloadLetter and handleDownloadLetterAndStrip, apply textBoxRotation to the text overlay
@@ -670,13 +700,8 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     }
 
     // Download the canvas as PNG
-    const dataUrl = canvas.toDataURL("image/png");
-    const link = document.createElement("a");
-    link.href = dataUrl;
-    link.download = "photobooth-letter.png";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const dataUrl = canvas.toDataURL('image/png');
+    await downloadFile(dataUrl, `photobooth-letter-${Date.now()}.png`, handleShowDisclaimer);
   };
 
   // Download letter + strip as composite PNG
@@ -883,13 +908,8 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     await drawCard(ctx);
 
     // Download the composite canvas as PNG
-    const dataUrl = canvas.toDataURL("image/png");
-    const link = document.createElement("a");
-    link.href = dataUrl;
-    link.download = "photobooth-letter-and-strip.png";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const dataUrl = canvas.toDataURL('image/png');
+    await downloadFile(dataUrl, `photobooth-letter-and-strip-${Date.now()}.png`, handleShowDisclaimer);
   };
 
   // Calculate max characters that fit in the textarea (based on unscaled card size)
@@ -1257,18 +1277,14 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
 
   // Wrap all download handlers to show disclaimer after download
   const handleDownloadWithDisclaimer = (...args) => {
-    handleDownloadLetter(...args);
-    setTimeout(handleShowDisclaimer, 150);
+    handleDownloadLetter(...args, handleShowDisclaimer);
   };
   const handleDownloadLetterAndStripWithDisclaimer = (...args) => {
-    setTimeout(() => {
-      handleDownloadLetterAndStrip(...args);
-      handleShowDisclaimer();
-    }, 50); // small delay to ensure latest frontElement
+    // The disclaimer is now called from within the downloadFile helper for web
+    handleDownloadLetterAndStrip(...args, handleShowDisclaimer);
   };
   const handleDownloadStripWithDisclaimer = (...args) => {
-    handleDownload(...args);
-    setTimeout(handleShowDisclaimer, 150);
+    handleDownload(...args, handleShowDisclaimer);
   };
 
   // Track which element is in front: 'card' or 'strip' - REMOVED for consistency

@@ -8,8 +8,8 @@ export default function FrameLayout({ images, mapping, filters }) {
     <div
       style={{
         position: "relative",
-        width: "100%",
-        maxWidth: `${frameWidth}px`,
+        width: `${frameWidth}px`,
+        maxWidth: "100%",
         aspectRatio: `${frameWidth} / ${frameHeight}`,
         background: "#fff",
         margin: "0 auto",
@@ -53,9 +53,11 @@ export default function FrameLayout({ images, mapping, filters }) {
         src={frame}
         alt="Frame Overlay"
         style={{
-          position: "relative",
+          position: "absolute",
+          top: 0,
+          left: 0,
           width: "100%",
-          height: "auto",
+          height: "100%",
           pointerEvents: "none",
           zIndex: 10,
           display: "block"

@@ -12,3 +12,6 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Replaced `gifshot` with dynamically imported `gifenc` in `StripDesign.jsx` for faster generation and proper transparent background support.
 - Updated the standard GIF download to use high-quality `rgb565` quantization and a solid white background.
+
+### Fixed
+- Corrected CSS styling in `FrameLayout.jsx` to ensure frame overlays and photo windows are sized and positioned correctly based on `frameMappings.js`.
