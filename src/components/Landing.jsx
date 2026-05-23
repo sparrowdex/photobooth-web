@@ -89,7 +89,7 @@ export default function Landing({ onStart }) {
         </div>
 
         {/* Main Card */}
-        <div className={`relative ${colors.card} bg-opacity-90 rounded-3xl ${colors.shadow} px-6 py-10 md:px-12 md:py-14 flex flex-col items-center text-center w-full max-w-[90vw] md:max-w-xl`}>
+        <div className={`relative ${colors.card} bg-opacity-90 rounded-3xl ${colors.shadow} px-7 py-10 md:px-12 md:py-0 md:h-72 flex flex-col items-center justify-center text-center w-full max-w-[90vw] md:max-w-xl`}>
           <h1 className={`text-4xl md:text-5xl font-pacifico mb-4 ${colors.text} drop-shadow-lg`}>
             Welcome to Photobooth
           </h1>

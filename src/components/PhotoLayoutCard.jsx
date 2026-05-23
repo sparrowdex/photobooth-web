@@ -10,7 +10,7 @@ export default function PhotoLayoutCard({ images, filters, selectedDesign, trans
 
   if (mapping) {
     return (
-      <div className={transparentCard ? "bg-transparent shadow-none p-6 flex flex-col items-center" : `${colors.card} rounded-2xl shadow-2xl p-6 flex flex-col items-center`}>
+      <div className={transparentCard ? "bg-transparent shadow-none p-2 sm:p-4 md:p-6 flex flex-col items-center" : `${colors.card} rounded-2xl shadow-2xl p-4 md:p-6 flex flex-col items-center`}>
         <FrameLayout images={images} mapping={mapping} filters={filters} />
       </div>
     );
@@ -27,7 +27,7 @@ export default function PhotoLayoutCard({ images, filters, selectedDesign, trans
   const gridHeight = rows * imageHeight + (rows - 1) * gap;
 
   return (
-    <div className={`${colors.card} rounded-2xl shadow-2xl p-6 flex flex-col items-center`}>
+    <div className={`${colors.card} rounded-2xl shadow-2xl p-4 md:p-6 flex flex-col items-center`}>
       <div
         className={`relative grid ${isGrid ? "grid-cols-2" : "grid-cols-1"} gap-4`}
         style={{

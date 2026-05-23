@@ -79,7 +79,7 @@ export default function Photobooth({ onBack }) {
   if (!layout) {
     return (
       <AppLayout>
-        <BackButton onClick={onBack}>Back</BackButton>
+        <BackButton onClick={onBack} className="absolute top-4 left-4 md:top-8 md:left-8 z-20">Back</BackButton>
         <StripLayoutSelection onSelectLayout={setLayout} />
       </AppLayout>
     );

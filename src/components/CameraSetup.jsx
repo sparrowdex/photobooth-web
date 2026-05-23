@@ -231,6 +231,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
   if (isMobile && !isLandscape) {
     cameraContainerStyle = {
       width: "100%",
+      maxWidth: "calc(48svh * 0.75)",
       aspectRatio: "3 / 4",
       position: "relative",
       background: "transparent",
@@ -241,7 +242,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
   }
 
   return (
-    <div className="flex flex-col items-center relative w-full min-h-screen bg-transparent overflow-x-hidden py-8 px-4">
+    <div className="flex flex-col items-center relative w-full min-h-[100svh] bg-transparent overflow-x-hidden py-4 md:py-8 px-2 md:px-4">
       {/* Orientation Prompt */}
       {/* Removed: Landscape mode disclaimer */}
 
@@ -293,14 +294,14 @@ export default function CameraSetup({ layout, onBack, onDone }) {
       )}
 
       <div className="w-full max-w-5xl flex flex-col items-center">
-        <BackButton className="mb-4 self-start md:absolute md:top-8 md:left-8 z-10" onClick={onBack}>
+        <BackButton className="mb-2 md:mb-4 self-start md:absolute md:top-8 md:left-8 z-10" onClick={onBack}>
           Go Back
         </BackButton>
 
         <div className={`relative w-full flex flex-col items-center mt-4 md:mt-8 ${
-          isMobile ? `${colors.card} bg-opacity-70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white border-opacity-50 p-6 mt-2` : ''
+          isMobile ? `${colors.card} bg-opacity-70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white border-opacity-50 p-3 sm:p-6 mt-2` : ''
         }`}>
-          <div className={`mb-6 text-2xl md:text-4xl font-pacifico font-bold ${colors.text} drop-shadow-sm`}>
+          <div className={`mb-3 md:mb-6 text-xl md:text-4xl font-pacifico font-bold ${colors.text} drop-shadow-sm`}>
             {step === "done"
               ? "All Photos Captured!"
               : step === "start"
@@ -308,8 +309,8 @@ export default function CameraSetup({ layout, onBack, onDone }) {
                 : `Photo ${captured.length + 1} of ${shots}`}
           </div>
 
-          {/* Camera Container - fixed size to prevent shrinking */}
-          <div className="mb-6 flex justify-center w-full">
+          {/* Camera Container */}
+          <div className="mb-3 md:mb-6 flex justify-center w-full">
             <div 
               style={cameraContainerStyle}
               className="shadow-inner bg-black ring-4 ring-white ring-opacity-60 rounded-xl overflow-hidden relative"
@@ -349,7 +350,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
           {/* Start Photo Session button */}
           {step === "start" && (
             <button
-              className={`px-10 py-4 ${colors.button} text-white rounded-full shadow-lg transition-transform hover:scale-105 text-xl font-semibold`}
+              className={`px-6 py-3 md:px-10 md:py-4 ${colors.button} text-white rounded-full shadow-lg transition-transform hover:scale-105 text-lg md:text-xl font-semibold`}
               onClick={handleStartSession}
             >
               Start Photo Session
@@ -359,7 +360,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
           {/* Take Photo button for each shot */}
           {step === "preview" && captured.length < shots && (
             <button
-              className={`px-10 py-4 ${colors.button} text-white rounded-full shadow-lg transition-transform hover:scale-105 text-xl font-semibold`}
+              className={`px-6 py-3 md:px-10 md:py-4 ${colors.button} text-white rounded-full shadow-lg transition-transform hover:scale-105 text-lg md:text-xl font-semibold`}
               onClick={handleStartCountdown}
             >
               Take Photo
@@ -367,27 +368,27 @@ export default function CameraSetup({ layout, onBack, onDone }) {
           )}
 
           {/* Slots UI */}
-          <div className="flex flex-wrap justify-center gap-4 md:gap-6 mt-8 w-full">
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-4 md:gap-6 mt-4 md:mt-8 w-full">
             {Array.from({ length: shots }).map((_, i) =>
               captured[i] ? (
                 <div key={i} className="flex flex-col items-center relative group">
                   <img
                     src={captured[i].photo}
                     alt={`Shot ${i + 1}`}
-                    className="w-20 h-28 md:w-28 md:h-36 object-cover rounded-xl shadow-md border-2 border-white"
+                    className="w-14 h-20 sm:w-20 sm:h-28 md:w-28 md:h-36 object-cover rounded-xl shadow-md border-2 border-white"
                   />
                   {captured[i].gif && (
                     <img
                       src={captured[i].gif}
                       alt={`GIF ${i + 1}`}
-                      className="w-10 h-10 md:w-14 md:h-14 object-cover rounded-lg shadow-sm border-2 border-white absolute -bottom-2 -right-2 bg-white"
+                      className="w-8 h-8 sm:w-10 sm:h-10 md:w-14 md:h-14 object-cover rounded-lg shadow-sm border-2 border-white absolute -bottom-2 -right-2 bg-white"
                     />
                   )}
                 </div>
               ) : (
                 <div
                   key={i}
-                  className={`w-20 h-28 md:w-28 md:h-36 rounded-xl border-4 border-dashed ${colors.borderLight} flex items-center justify-center ${colors.textSecondary} text-2xl md:text-3xl font-bold opacity-70 bg-white bg-opacity-40 shadow-inner`}
+                  className={`w-14 h-20 sm:w-20 sm:h-28 md:w-28 md:h-36 rounded-xl border-4 border-dashed ${colors.borderLight} flex items-center justify-center ${colors.textSecondary} text-xl sm:text-2xl md:text-3xl font-bold opacity-70 bg-white bg-opacity-40 shadow-inner`}
                 >
                   {i + 1}
                 </div>
@@ -397,15 +398,15 @@ export default function CameraSetup({ layout, onBack, onDone }) {
 
           {/* Retake/Choose Strip Design after all photos */}
           {step === "done" && (
-            <div className="flex flex-wrap justify-center gap-4 mt-8">
+            <div className="flex flex-wrap justify-center gap-2 md:gap-4 mt-4 md:mt-8">
               <button
-                className={`px-8 py-4 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-full shadow transition-transform hover:scale-105 text-lg font-semibold`}
+                className={`px-6 py-3 md:px-8 md:py-4 ${colors.buttonSecondary} rounded-full shadow transition-transform hover:scale-105 text-base md:text-lg font-semibold`}
                 onClick={handleStartOrRetake}
               >
                 Retake
               </button>
               <button
-                className={`px-8 py-4 ${colors.button} text-white rounded-full shadow-lg transition-transform hover:scale-105 text-lg font-semibold`}
+                className={`px-6 py-3 md:px-8 md:py-4 ${colors.button} text-white rounded-full shadow-lg transition-transform hover:scale-105 text-base md:text-lg font-semibold`}
                 onClick={() => onDone(captured)}
               >
                 Choose Strip Design

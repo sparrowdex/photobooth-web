@@ -19,8 +19,38 @@ function DesignGrid({ designs, selectedDesign, onSelectDesign }) {
   const start = page * pageSize;
   const paginatedDesigns = designs.slice(start, start + pageSize);
 
+  const [touchStartX, setTouchStartX] = useState(0);
+  const [touchEndX, setTouchEndX] = useState(0);
+  const [touchStartY, setTouchStartY] = useState(0);
+  const [touchEndY, setTouchEndY] = useState(0);
+
+  function handleTouchStart(e) {
+    setTouchStartX(e.targetTouches[0].clientX);
+    setTouchStartY(e.targetTouches[0].clientY);
+    setTouchEndX(e.targetTouches[0].clientX);
+    setTouchEndY(e.targetTouches[0].clientY);
+  }
+
+  function handleTouchMove(e) {
+    setTouchEndX(e.targetTouches[0].clientX);
+    setTouchEndY(e.targetTouches[0].clientY);
+  }
+
+  function handleTouchEnd() {
+    if (!touchStartX || !touchEndX) return;
+    const distanceX = touchStartX - touchEndX;
+    const distanceY = touchStartY - touchEndY;
+    const minSwipeDistance = 40;
+    
+    // Check if the swipe is mostly horizontal
+    if (Math.abs(distanceX) > Math.abs(distanceY)) {
+      if (distanceX > minSwipeDistance && page < pageCount - 1) setPage((p) => p + 1);
+      if (distanceX < -minSwipeDistance && page > 0) setPage((p) => p - 1);
+    }
+  }
+
   return (
-    <>
+    <div className="w-full flex flex-col items-center" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
       <div className="grid grid-cols-2 gap-4 mb-4 place-items-center">
         {paginatedDesigns.map((design) => (
           <div
@@ -65,7 +95,7 @@ function DesignGrid({ designs, selectedDesign, onSelectDesign }) {
           </button>
         )}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -156,7 +186,9 @@ const downloadFile = async (data, filename, showDisclaimer) => {
 export default function StripDesign({ images, designs, onBack, captured = [], showLetterOverlay, setShowLetterOverlay }) {
   const { colors } = useTheme();
   const [step, setStep] = useState("filters");
-  const [photoFilters, setPhotoFilters] = useState(images.map(() => ""));
+  const [showControls, setShowControls] = useState(true);
+  const [photoFilters, setPhotoFilters] = useState(images.map(() => []));
+  const cssFilters = photoFilters.map(layers => layers.length > 0 ? layers.map(f => f.value).join(' ') : "");
   const [selectedDesign, setSelectedDesign] = useState(designs[0] || null);
   const [cardAnim, setCardAnim] = useState("card-enter");
   const [downloadType, setDownloadType] = useState("photo"); // 'photo' or 'gif'
@@ -412,7 +444,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
               ctx.closePath();
               ctx.clip();
             }
-            ctx.filter = photoFilters[i] || "none";
+            ctx.filter = cssFilters[i] || "none";
             drawImageCover(ctx, img, win.left, win.top, win.width, win.height);
             ctx.restore();
             ctx.filter = "none";
@@ -450,7 +482,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
         img.src = images[i];
         await new Promise((resolve) => {
           img.onload = () => {
-            ctx.filter = photoFilters[i] || "none";
+            ctx.filter = cssFilters[i] || "none";
             const col = isGrid ? i % 2 : 0;
             const row = isGrid ? Math.floor(i / 2) : i;
             const x = col * (imageWidth + gap);
@@ -562,7 +594,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
               ctx.closePath();
               ctx.clip();
             }
-            ctx.filter = photoFilters[i] || "none";
+            ctx.filter = cssFilters[i] || "none";
             drawImageCover(ctx, img, win.left, win.top, win.width, win.height);
             ctx.restore();
             ctx.filter = "none";
@@ -794,7 +826,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
               ctx.closePath();
               ctx.clip();
             }
-            ctx.filter = photoFilters[i] || "none";
+            ctx.filter = cssFilters[i] || "none";
             drawImageCover(ctx, img, win.left, win.top, win.width, win.height);
             ctx.restore();
             ctx.filter = "none";
@@ -1331,11 +1363,11 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     if (isMobile && isPortrait) {
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      // Card: fit to 96vw, max 90vh
-      let width = Math.min(vw * 0.96, cardSize.width);
+        // Card: fit to 50vw, max 45vh to match the photo strip scaling
+        let width = Math.min(vw * 0.50, cardSize.width);
       let height = Math.round(width * (cardSize.height / cardSize.width));
-      if (height > vh * 0.9) {
-        height = vh * 0.9;
+        if (height > vh * 0.45) {
+          height = vh * 0.45;
         width = Math.round(height * (cardSize.width / cardSize.height));
       }
       mobileCardStyle = {
@@ -1343,17 +1375,17 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
         width,
         height,
         left: '50%',
-        top: '50%',
-        maxWidth: '96vw',
-        maxHeight: '90vh',
-        minWidth: 200,
-        minHeight: 200,
+          top: '45%', // Push slightly up so the download buttons don't overlap
+          maxWidth: '50vw',
+          maxHeight: '45vh',
+          minWidth: 120,
+          minHeight: 120,
       };
       mobileTextBoxStyle = {
-        width: '90%',
-        minWidth: 120,
-        maxWidth: '98vw',
-        fontSize: Math.max(16, width * 0.06),
+          width: '85%',
+          minWidth: 80,
+          maxWidth: '45vw',
+          fontSize: Math.max(12, width * 0.08),
       };
       mobileButtonRowStyle = {
         flexDirection: 'column',
@@ -1387,7 +1419,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
           >
             <PhotoLayoutCard
               images={images}
-              filters={photoFilters}
+              filters={cssFilters}
               selectedDesign={selectedDesign}
               transparentCard={true}
             />
@@ -1815,40 +1847,59 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
   };
 
   // Normal strip design UI
-  let mainContainerStyle = {};
+  let mainContainerStyle = { position: 'relative' };
   if (isMobile && isPortrait) {
     mainContainerStyle = {
-      width: '100vw',
-      minHeight: '100vh',
-      maxWidth: '100vw',
+      ...mainContainerStyle,
+      width: '100%',
+      minHeight: '100svh',
       overflowX: 'hidden',
       padding: '0',
       margin: '0',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      justifyContent: 'flex-start',
+      justifyContent: 'center',
       background: colors.background,
     };
   }
 
   return (
-    <div className={`flex flex-col md:flex-row w-full min-h-screen justify-center items-center gap-8 ${colors.background} overflow-x-hidden`}
+    <div className={`flex flex-col w-full min-h-[100svh] justify-center items-center ${colors.background} overflow-hidden`}
       style={mainContainerStyle}
     >
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0 transition-transform duration-500 ease-in-out pb-12" style={{ transform: showControls ? 'scale(0.85) translateY(-5vh)' : 'scale(1) translateY(0)' }}>
         <PhotoLayoutCard
           images={images}
-          filters={photoFilters}
+        filters={cssFilters}
           selectedDesign={selectedDesign}
+          transparentCard={true}
         />
       </div>
-      <div className="flex items-center">
-        <div className={`relative z-10 ${cardAnim} w-full max-w-md md:max-w-sm`}>
+      <div 
+        className="fixed bottom-0 left-0 w-full z-50 transition-transform duration-500 ease-in-out flex flex-col items-center"
+        style={{ transform: showControls ? 'translateY(0)' : 'translateY(calc(100% - 44px))' }}
+      >
+        <button 
+          onClick={() => setShowControls(!showControls)}
+          className={`relative w-full max-w-[90vw] sm:min-w-[340px] md:max-w-md h-11 bg-gradient-to-r ${colors.primaryGradient} flex justify-center items-center rounded-t-2xl shadow-[0_-4px_15px_rgba(0,0,0,0.15)] focus:outline-none transition-all hover:brightness-110`}
+        >
+          <span className="text-white font-bold text-sm tracking-widest uppercase drop-shadow-sm">
+            {showControls ? "Hide Controls" : "Customize Strip 💗"}
+          </span>
+          <div className="absolute right-4 md:right-6">
+            {showControls ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white opacity-90"><polyline points="6 15 12 9 18 15"></polyline></svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white opacity-90"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            )}
+          </div>
+        </button>
+        <div className={`relative z-10 w-full max-w-[90vw] sm:min-w-[340px] md:max-w-md bg-white p-4 md:p-8 shadow-2xl max-h-[75vh] overflow-y-auto`}>
           {/* Download type dropdown */}
-          <div className="mb-4 flex justify-end">
+          <div className="mb-4 flex justify-center md:justify-end">
             <select
-              className="border rounded px-2 py-1 text-base"
+              className="border border-pink-200 bg-pink-50 text-pink-700 font-medium rounded-xl px-3 py-1.5 text-sm md:text-base outline-none focus:ring-2 focus:ring-pink-300 transition-all"
               value={downloadType}
               onChange={e => setDownloadType(e.target.value)}
               disabled={isDownloading}
@@ -1874,7 +1925,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
               BackButton={BackButton}
             />
           ) : (
-            <div>
+            <div className="flex flex-col items-center">
               <DesignGrid
                 designs={designs}
                 selectedDesign={selectedDesign}
@@ -1921,9 +1972,9 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
                   </div>
                 </div>
               )}
-              <div className="flex justify-between mt-4">
-                <BackButton onClick={() => goToStep("filters")}>Back</BackButton>
-                <NextButton onClick={downloadType.startsWith("gif") ? handleDownloadGif : handleDownload} disabled={!selectedDesign || isDownloading}>
+              <div className="flex w-full mt-3 md:mt-6 gap-2 md:gap-3">
+                <BackButton className="flex-1 justify-center" onClick={() => goToStep("filters")}>Back</BackButton>
+                <NextButton className="flex-1 justify-center" onClick={downloadType.startsWith("gif") ? handleDownloadGif : handleDownload} disabled={!selectedDesign || isDownloading}>
                   {isDownloading ? "Preparing..." : "Download"}
                 </NextButton>
               </div>

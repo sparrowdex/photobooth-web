@@ -6,12 +6,12 @@ export default function FrameLayout({ images, mapping, filters }) {
 
   return (
     <div
+      className="max-w-[65vw] sm:max-w-[250px] md:max-w-full shadow-sm"
       style={{
         position: "relative",
         width: `${frameWidth}px`,
-        maxWidth: "100%",
         aspectRatio: `${frameWidth} / ${frameHeight}`,
-        background: "#fff",
+        background: "transparent",
         margin: "0 auto",
       }}
     >

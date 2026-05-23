@@ -14,7 +14,7 @@ export default function AppLayout({ children }) {
   }, []);
 
   return (
-    <div className={`${colors.animatedBg} min-h-screen flex items-center justify-center relative transition-all duration-1000`}>
+    <div className={`${colors.animatedBg} min-h-[100svh] flex flex-col relative transition-all duration-1000`}>
       {/* Shooting Star Pointer */}
       <div
         style={{
@@ -44,10 +44,9 @@ export default function AppLayout({ children }) {
         </svg>
       </div>
       {/* Page Content */}
-      <div className="w-full h-full flex flex-col items-center justify-center animate-fadeInUp">
+      <div className="w-full flex-grow flex flex-col items-center justify-center animate-fadeInUp relative">
         {children}
       </div>
     </div>
   );
 }
-
