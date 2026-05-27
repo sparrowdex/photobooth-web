@@ -1,12 +1,22 @@
 
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useTheme } from "./ThemeContext";
 
 export default function Landing({ onStart }) {
   const { colors } = useTheme();
   const [star, setStar] = useState({ x: 0, y: 0 });
   const [cardHovered, setCardHovered] = useState(false);
+  const videoRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Shooting star follows the mouse
   useEffect(() => {
@@ -17,10 +27,59 @@ export default function Landing({ onStart }) {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
+  // Seamless forward loop (restart slightly before the end)
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    let animationFrameId;
+
+    const loopSeamlessly = () => {
+      if (video.duration) {
+        // Fade out 1.5s before the end of the video for a slow, cinematic pulse
+        if (video.currentTime >= video.duration - 1.5) {
+          video.style.opacity = '0';
+        } else {
+          video.style.opacity = '0.4';
+        }
+
+        // Snappy jump to start right before the video naturally ends
+        if (video.currentTime >= video.duration - 0.1) {
+          video.currentTime = 0;
+        }
+      }
+      animationFrameId = requestAnimationFrame(loopSeamlessly);
+    };
+
+    animationFrameId = requestAnimationFrame(loopSeamlessly);
+
+    return () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    };
+  }, [isMobile]);
+
   return (
-    <div className={`${colors.animatedBg} min-h-screen flex items-center justify-center relative transition-all duration-1000 overflow-hidden px-4 md:px-0`}>
+    <div className={`min-h-screen flex items-center justify-center relative transition-all duration-1000 overflow-hidden px-4 md:px-0 bg-black`}>
+      {/* Background Video */}
+      <video
+        key={isMobile ? "mobile" : "desktop"}
+        ref={videoRef}
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none transition-opacity duration-[1500ms] ease-in-out"
+        style={{ opacity: 0.4 }}
+      >
+        <source src={isMobile ? "/videos/reels_mobile.mp4" : "/videos/reels.mp4"} type="video/mp4" />
+      </video>
+      
+      {/* Gradient Overlay */}
+      <div className={`absolute inset-0 ${colors.animatedBg} opacity-85 pointer-events-none z-0`}></div>
+
       {/* Shooting Star */}
       <div
+        className="hidden md:block"
         style={{
           position: "fixed",
           left: star.x - 20,

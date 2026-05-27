@@ -69,6 +69,10 @@ export function FilterCarousel({
     }
   }
 
+  const activeFilterObj = activeFilter !== null ? filters[activeFilter] : null;
+  const isNone = activeFilterObj ? activeFilterObj.name === "None" : false;
+  const isAppliedToAll = activeFilterObj ? (isNone ? filtersState.every(photoLayers => photoLayers.length === 0) : filtersState.every(photoLayers => photoLayers.some(f => f.name === activeFilterObj.name))) : false;
+
   return (
     <div className="flex flex-col items-center mb-6 w-full" ref={carouselRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
       <div className="flex items-center justify-center gap-2 w-full">
@@ -85,8 +89,6 @@ export function FilterCarousel({
         {paginatedFilters.map((filter, idx) => {
           const realIdx = start + idx;
           const layerIdx = getGlobalLayerIndex(filter);
-          const isNone = filter.name === "None";
-          const isAppliedToAll = isNone ? filtersState.every(photoLayers => photoLayers.length === 0) : filtersState.every(photoLayers => photoLayers.some(f => f.name === filter.name));
 
           return (
             <div key={filter.name} className="relative">
@@ -101,82 +103,6 @@ export function FilterCarousel({
               {layerIdx !== null && (
                 <div className={`absolute -top-2 -right-2 w-6 h-6 rounded-full ${colors.button} text-white flex items-center justify-center text-xs font-bold shadow-md z-10 pointer-events-none`}>
                   {layerIdx}
-                </div>
-              )}
-              {activeFilter === realIdx && (
-                <div className={`absolute left-0 z-20 mt-2 w-56 ${colors.overlay} rounded-xl shadow-lg border ${colors.borderLight}`}>
-                  <div className={`p-2 text-sm ${colors.text} font-semibold`}>Apply to:</div>
-                  {/* All Photos Option */}
-                  <button
-                    className={`flex items-center gap-2 w-full px-4 py-2 hover:bg-${colors.primary}-50 rounded-lg transition border-b ${colors.borderLight}
-                      ${isAppliedToAll ? `bg-${colors.primary}-100 font-bold` : ""}
-                    `}
-                    onClick={() => {
-                      if (isNone) {
-                        setFilters(filtersState.map(() => []));
-                      } else {
-                        const newFilters = filtersState.map(photoLayers => {
-                          if (isAppliedToAll) {
-                            return photoLayers.filter(f => f.name !== filter.name);
-                          } else {
-                            if (photoLayers.some(f => f.name === filter.name)) return photoLayers;
-                            return [...photoLayers, filter];
-                          }
-                        });
-                        setFilters(newFilters);
-                      }
-                    }}
-                  >
-                    <span className="font-semibold">All Photos</span>
-                    {isAppliedToAll && (
-                      <span className={`ml-auto w-5 h-5 rounded-full ${colors.button} text-white flex items-center justify-center text-xs font-bold`}>✓</span>
-                    )}
-                  </button>
-                  {/* Individual Photo Options */}
-                  {images.map((img, i) => {
-                    const photoLayerIdx = isNone ? -1 : filtersState[i].findIndex(f => f.name === filter.name);
-                    const hasFilter = isNone ? filtersState[i].length === 0 : photoLayerIdx !== -1;
-                    return (
-                      <button
-                      key={i}
-                      className={`flex items-center gap-2 w-full px-4 py-2 hover:bg-${colors.primary}-50 rounded-lg transition
-                        ${hasFilter ? `bg-${colors.primary}-100 font-bold` : ""}
-                      `}
-                      onClick={() => {
-                        if (isNone) {
-                          const newFilters = [...filtersState];
-                          newFilters[i] = [];
-                          setFilters(newFilters);
-                        } else {
-                          const newFilters = [...filtersState];
-                          const photoLayers = newFilters[i];
-                          if (hasFilter) {
-                            newFilters[i] = photoLayers.filter(f => f.name !== filter.name);
-                          } else {
-                            newFilters[i] = [...photoLayers, filter];
-                          }
-                          setFilters(newFilters);
-                        }
-                      }}
-                    >
-                      <img
-                        src={img}
-                        alt={`Shot ${i + 1}`}
-                        className="w-10 h-10 object-cover rounded border"
-                        style={{ filter: filter.value }}
-                      />
-                      <span>Photo {i + 1}</span>
-                      {hasFilter && !isNone && (
-                        <span className={`ml-auto w-5 h-5 rounded-full ${colors.button} text-white flex items-center justify-center text-xs font-bold`}>
-                          {photoLayerIdx + 1}
-                        </span>
-                      )}
-                      {hasFilter && isNone && (
-                        <span className={`ml-auto w-5 h-5 rounded-full ${colors.button} text-white flex items-center justify-center text-xs font-bold`}>✓</span>
-                      )}
-                    </button>
-                    );
-                  })}
                 </div>
               )}
             </div>
@@ -199,6 +125,86 @@ export function FilterCarousel({
           <div key={idx} className={`w-2 h-2 rounded-full transition-all duration-300 ${page === idx ? `bg-${colors.primary}-400 scale-110` : 'bg-gray-200'}`} />
         ))}
       </div>
+
+      {/* Apply To Panel (Rendered outside the overflow-constrained flex items) */}
+      {activeFilterObj && (
+        <div className={`mt-4 w-full max-w-md z-20 ${colors.overlay} rounded-xl shadow-lg border ${colors.borderLight} overflow-hidden animate-fadeInUp`}>
+          <div className={`p-2 px-4 text-sm ${colors.text} font-semibold border-b ${colors.borderLight} bg-gray-50`}>Apply "{activeFilterObj.name}" to:</div>
+          
+          {/* All Photos Option */}
+          <button
+            className={`flex items-center gap-2 w-full px-4 py-3 hover:bg-${colors.primary}-50 transition border-b ${colors.borderLight}
+              ${isAppliedToAll ? `bg-${colors.primary}-100 font-bold` : ""}
+            `}
+            onClick={() => {
+              if (isNone) {
+                setFilters(filtersState.map(() => []));
+              } else {
+                const newFilters = filtersState.map(photoLayers => {
+                  if (isAppliedToAll) {
+                    return photoLayers.filter(f => f.name !== activeFilterObj.name);
+                  } else {
+                    if (photoLayers.some(f => f.name === activeFilterObj.name)) return photoLayers;
+                    return [...photoLayers, activeFilterObj];
+                  }
+                });
+                setFilters(newFilters);
+              }
+            }}
+          >
+            <span className="font-semibold text-sm">All Photos</span>
+            {isAppliedToAll && (
+              <span className={`ml-auto w-5 h-5 rounded-full ${colors.button} text-white flex items-center justify-center text-xs font-bold shadow-sm`}>✓</span>
+            )}
+          </button>
+
+          {/* Individual Photo Options */}
+          <div className="flex flex-col max-h-64 overflow-y-auto pb-2">
+            {images.map((img, i) => {
+              const photoLayerIdx = isNone ? -1 : filtersState[i].findIndex(f => f.name === activeFilterObj.name);
+              const hasFilter = isNone ? filtersState[i].length === 0 : photoLayerIdx !== -1;
+              return (
+                <button
+                  key={i}
+                  className={`flex items-center gap-3 w-full px-4 py-2 hover:bg-${colors.primary}-50 transition ${hasFilter ? `bg-${colors.primary}-50 font-bold` : ""}`}
+                  onClick={() => {
+                    if (isNone) {
+                      const newFilters = [...filtersState];
+                      newFilters[i] = [];
+                      setFilters(newFilters);
+                    } else {
+                      const newFilters = [...filtersState];
+                      const photoLayers = newFilters[i];
+                      if (hasFilter) {
+                        newFilters[i] = photoLayers.filter(f => f.name !== activeFilterObj.name);
+                      } else {
+                        newFilters[i] = [...photoLayers, activeFilterObj];
+                      }
+                      setFilters(newFilters);
+                    }
+                  }}
+                >
+                  <img
+                    src={img}
+                    alt={`Shot ${i + 1}`}
+                    className="w-8 h-10 object-cover rounded border border-gray-200 shadow-sm"
+                    style={{ filter: activeFilterObj.value }}
+                  />
+                  <span className="text-sm text-gray-700">Photo {i + 1}</span>
+                  {hasFilter && !isNone && (
+                    <span className={`ml-auto w-5 h-5 rounded-full ${colors.button} text-white flex items-center justify-center text-[11px] font-bold shadow-sm`}>
+                      {photoLayerIdx + 1}
+                    </span>
+                  )}
+                  {hasFilter && isNone && (
+                    <span className={`ml-auto w-5 h-5 rounded-full ${colors.button} text-white flex items-center justify-center text-[11px] font-bold shadow-sm`}>✓</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

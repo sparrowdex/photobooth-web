@@ -55,6 +55,8 @@ export default function CameraSetup({ layout, onBack, onDone }) {
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [recordedChunks, setRecordedChunks] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
+  const [facingMode, setFacingMode] = useState("user");
+  const [numberOfCameras, setNumberOfCameras] = useState(0);
 
   const isLandscape = useLandscape();
   const isMobile = useIsMobile();
@@ -96,10 +98,13 @@ export default function CameraSetup({ layout, onBack, onDone }) {
         // Dynamically import gifshot
         const gifshot = (await import('gifshot')).default;
         
+        const gWidth = isMobile && !isLandscape ? 480 : 640;
+        const gHeight = isMobile && !isLandscape ? 640 : 480;
+
         gifshot.createGIF({
           video: [url],
-          gifWidth: 640,
-          gifHeight: 480,
+          gifWidth: gWidth,
+          gifHeight: gHeight,
           frameDuration: 0.1,
           progressCallback: function(progress) {
             console.log('GIF creation progress:', progress);
@@ -131,7 +136,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     } catch (error) {
       console.error('Error starting recording:', error);
     }
-  }, [shots, cameraRef, setCaptured, setStep]);
+  }, [shots, cameraRef, setCaptured, setStep, isMobile, isLandscape]);
 
   // Countdown logic
   useEffect(() => {
@@ -156,10 +161,13 @@ export default function CameraSetup({ layout, onBack, onDone }) {
           // Dynamically import gifshot
           const gifshot = (await import('gifshot')).default;
           
+          const gWidth = isMobile && !isLandscape ? 240 : 320;
+          const gHeight = isMobile && !isLandscape ? 320 : 240;
+
           gifshot.createGIF({
             video: [url],
-            gifWidth: 320,
-            gifHeight: 240,
+            gifWidth: gWidth,
+            gifHeight: gHeight,
             numFrames: 10,
             frameDuration: 0.2,
           }, function(obj) {
@@ -198,7 +206,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     }
     const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
-  }, [countdown, shots]);
+  }, [countdown, shots, isMobile, isLandscape]);
 
   // Reset session
   const handleStartOrRetake = () => {
@@ -241,8 +249,18 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     };
   }
 
+  const backgroundImage = isMobile && !isLandscape
+    ? "url('./images/customize_bg.png')"
+    : "url('./images/strip_design_wide.png')";
+
   return (
     <div className="flex flex-col items-center relative w-full min-h-[100svh] bg-transparent overflow-x-hidden py-4 md:py-8 px-2 md:px-4">
+      {/* Background Image Overlay */}
+      <div
+        className="absolute inset-0 w-full h-full bg-center bg-cover bg-no-repeat z-0 pointer-events-none"
+        style={{ backgroundImage }}
+      ></div>
+
       {/* Orientation Prompt */}
       {/* Removed: Landscape mode disclaimer */}
 
@@ -263,9 +281,9 @@ export default function CameraSetup({ layout, onBack, onDone }) {
           }}
           title="How to use the photobooth"
         >
-          <svg width="32" height="32" fill="white" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="12" fill="none"/>
-            <path d="M12 17h.01M12 7a5 5 0 0 1 5 5c0 2.5-2.5 3-2.5 3h-5s-2.5-.5-2.5-3a5 5 0 0 1 5-5zm0 0V5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <svg width="28" height="28" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+            <circle cx="12" cy="13" r="4" />
           </svg>
         </div>
       )}
@@ -288,19 +306,18 @@ export default function CameraSetup({ layout, onBack, onDone }) {
               <li>Make sure you are centered when posing for pictures.</li>
               <li>After all photos are taken, choose your strip design or retake if needed.</li>
               <li>Use the <b>Retake</b> button to restart the session at any time.</li>
+              <li>For the best look, layer your favorite filters on top of the <b>Soft Focus</b> filter, especially if your device has a high-resolution camera.</li>
             </ul>
           </div>
         </div>
       )}
 
-      <div className="w-full max-w-5xl flex flex-col items-center">
+      <div className="w-full max-w-5xl flex flex-col items-center relative z-10">
         <BackButton className="mb-2 md:mb-4 self-start md:absolute md:top-8 md:left-8 z-10" onClick={onBack}>
           Go Back
         </BackButton>
 
-        <div className={`relative w-full flex flex-col items-center mt-4 md:mt-8 ${
-          isMobile ? `${colors.card} bg-opacity-70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white border-opacity-50 p-3 sm:p-6 mt-2` : ''
-        }`}>
+        <div className="relative w-full flex flex-col items-center mt-4 md:mt-8">
           <div className={`mb-3 md:mb-6 text-xl md:text-4xl font-pacifico font-bold ${colors.text} drop-shadow-sm`}>
             {step === "done"
               ? "All Photos Captured!"
@@ -318,8 +335,8 @@ export default function CameraSetup({ layout, onBack, onDone }) {
               <Camera
                 ref={cameraRef}
                 aspectRatio={isMobile && !isLandscape ? 3 / 4 : 4 / 3}
-                facingMode="user"
-                numberOfCamerasCallback={() => {}}
+                facingMode={facingMode}
+                numberOfCamerasCallback={setNumberOfCameras}
                 errorMessages={{
                   noCameraAccessible: "No camera device accessible.",
                   permissionDenied: "Permission denied. Please refresh and give camera permission.",
@@ -330,11 +347,11 @@ export default function CameraSetup({ layout, onBack, onDone }) {
               
               {/* Viewfinder brackets */}
               {step !== "start" && step !== "done" && (
-                <div className="absolute inset-4 md:inset-8 pointer-events-none z-10 opacity-70">
-                  <div className="absolute top-0 left-0 w-8 md:w-16 h-8 md:h-16 border-t-4 border-l-4 border-white rounded-tl-xl"></div>
-                  <div className="absolute top-0 right-0 w-8 md:w-16 h-8 md:h-16 border-t-4 border-r-4 border-white rounded-tr-xl"></div>
-                  <div className="absolute bottom-0 left-0 w-8 md:w-16 h-8 md:h-16 border-b-4 border-l-4 border-white rounded-bl-xl"></div>
-                  <div className="absolute bottom-0 right-0 w-8 md:w-16 h-8 md:h-16 border-b-4 border-r-4 border-white rounded-br-xl"></div>
+                 <div className="absolute inset-4 md:inset-8 pointer-events-none z-10 opacity-70">
+                 <div className="absolute top-0 left-0 w-8 md:w-16 h-8 md:h-16 border-t-4 border-l-4 border-white rounded-tl-xl"></div>
+                 <div className="absolute top-0 right-0 w-8 md:w-16 h-8 md:h-16 border-t-4 border-r-4 border-white rounded-tr-xl"></div>
+                 <div className="absolute bottom-0 left-0 w-8 md:w-16 h-8 md:h-16 border-b-4 border-l-4 border-white rounded-bl-xl"></div>
+                 <div className="absolute bottom-0 right-0 w-8 md:w-16 h-8 md:h-16 border-b-4 border-r-4 border-white rounded-br-xl"></div>
                 </div>
               )}
 
@@ -343,6 +360,23 @@ export default function CameraSetup({ layout, onBack, onDone }) {
                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 z-20 backdrop-blur-sm">
                   <span className="text-white text-8xl md:text-9xl font-bold drop-shadow-2xl animate-ping">{countdown}</span>
                 </div>
+              )}
+
+              {/* Flip Camera Button */}
+              {step !== "done" && numberOfCameras > 1 && (
+                <button
+                  className="absolute top-4 right-4 md:top-6 md:right-6 z-50 p-2 sm:p-3 bg-black bg-opacity-30 backdrop-blur-md rounded-full text-white hover:bg-opacity-50 transition-all shadow-lg focus:outline-none"
+                  onClick={() => {
+                    if (cameraRef.current) {
+                      setFacingMode(cameraRef.current.switchCamera());
+                    }
+                  }}
+                  title="Flip Camera"
+                >
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
               )}
             </div>
           </div>
@@ -406,10 +440,11 @@ export default function CameraSetup({ layout, onBack, onDone }) {
                 Retake
               </button>
               <button
-                className={`px-6 py-3 md:px-8 md:py-4 ${colors.button} text-white rounded-full shadow-lg transition-transform hover:scale-105 text-base md:text-lg font-semibold`}
+                className={`px-6 py-3 md:px-8 md:py-4 ${colors.button} text-white rounded-full shadow-lg transition-transform hover:scale-105 text-base md:text-lg font-semibold disabled:opacity-50 disabled:cursor-wait disabled:hover:scale-100`}
                 onClick={() => onDone(captured)}
+                disabled={captured.some(c => !c.gif)}
               >
-                Choose Strip Design
+                {captured.some(c => !c.gif) ? "Processing GIFs..." : "Choose Strip Design"}
               </button>
             </div>
           )}

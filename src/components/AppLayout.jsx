@@ -17,6 +17,7 @@ export default function AppLayout({ children }) {
     <div className={`${colors.animatedBg} min-h-[100svh] flex flex-col relative transition-all duration-1000`}>
       {/* Shooting Star Pointer */}
       <div
+        className="hidden md:block"
         style={{
           position: "fixed",
           left: star.x - 20,

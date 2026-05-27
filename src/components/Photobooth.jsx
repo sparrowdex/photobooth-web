@@ -80,7 +80,10 @@ export default function Photobooth({ onBack }) {
     return (
       <AppLayout>
         <BackButton onClick={onBack} className="absolute top-4 left-4 md:top-8 md:left-8 z-20">Back</BackButton>
-        <StripLayoutSelection onSelectLayout={setLayout} />
+        <StripLayoutSelection onSelectLayout={(l) => {
+          setLayout(l);
+          setShowCamera(true);
+        }} />
       </AppLayout>
     );
   }
@@ -91,7 +94,10 @@ export default function Photobooth({ onBack }) {
       <AppLayout>
         <CameraSetup
           layout={layout}
-          onBack={() => setShowCamera(false)}
+          onBack={() => {
+            setShowCamera(false);
+            setLayout(null);
+          }}
           onDone={(images) => {
             setCapturedImages(images);
             setShowCamera(false);
@@ -154,24 +160,6 @@ export default function Photobooth({ onBack }) {
     );
   }
 
-  // Step 1.5: Confirm layout, go to camera
-  return (
-    <AppLayout>
-      <div className="flex flex-col items-center">
-        <div className="mb-6 flex flex-col items-center">
-          <span
-            className={`text-3xl ${colors.text} mb-1`}
-            style={{ fontFamily: "'Pacifico', cursive", letterSpacing: "1px" }}
-          >
-            You chose:
-          </span>
-          <span className="text-xl font-bold">{layout.label}</span>
-        </div>
-        <div className="flex gap-4 mt-2">
-          <BackButton onClick={() => setLayout(null)}>Back</BackButton>
-          <NextButton onClick={() => setShowCamera(true)}>Next</NextButton>
-        </div>
-      </div>
-    </AppLayout>
-  );
+  // Fallback return
+  return null;
 }

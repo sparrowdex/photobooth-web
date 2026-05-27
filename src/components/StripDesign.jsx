@@ -144,14 +144,14 @@ function isOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
 // Helper function to handle downloads for both web and native
 const downloadFile = async (data, filename, showDisclaimer) => {
   if (Capacitor.isNativePlatform()) {
-    // On mobile, save to the Photos gallery
+    // On mobile, save to the device
     try {
       // For blobs, we need to convert to base64
       let base64Data;
       if (data instanceof Blob) {
         base64Data = await new Promise((resolve, reject) => {
           const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
+          reader.onload = () => resolve(reader.result);
           reader.onerror = reject;
           reader.readAsDataURL(data);
         });
@@ -159,13 +159,16 @@ const downloadFile = async (data, filename, showDisclaimer) => {
         base64Data = data; // Assumes data is already a data URL (base64)
       }
 
+      // Capacitor requires the raw base64 string without the "data:image/png;base64," prefix
+      const base64String = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
+
       await Filesystem.writeFile({
         path: filename,
-        data: base64Data,
-        directory: Directory.Photos,
+        data: base64String,
+        directory: Directory.Documents,
       });
       // Simple alert, can be replaced with a nicer UI Toast component
-      alert('Saved to Photos!');
+      alert('Saved to Documents folder!');
     } catch (e) {
       console.error('Unable to save file', e);
       alert(`Error saving file: ${e.message}`);
@@ -529,14 +532,37 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     const gifFramesArr = await Promise.all(
       captured.map(async (cap) => {
         if (!cap.gif) return [];
-        const binary = await fetch(cap.gif).then(r => r.arrayBuffer());
-        const gif = parseGIF(binary);
-        const frames = decompressFrames(gif, true);
-        return frames;
+        try {
+          let binary;
+          // Bypass fetch() for data URIs as some Android WebViews fail to load large data strings
+          if (cap.gif.startsWith('data:')) {
+            const base64Data = cap.gif.split(',')[1];
+            const binaryString = window.atob(base64Data);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            binary = bytes.buffer;
+          } else {
+            binary = await fetch(cap.gif).then(r => r.arrayBuffer());
+          }
+          const gif = parseGIF(binary);
+          return decompressFrames(gif, true);
+        } catch (err) {
+          console.error("Error parsing GIF:", err);
+          return [];
+        }
       })
     );
     // Find the minimum number of frames across all GIFs
     const minFrames = Math.min(...gifFramesArr.map((arr) => arr.length));
+
+    if (minFrames === 0 || minFrames === Infinity) {
+      alert("Oops! The animations aren't ready or are corrupted. Please try taking the photos again.");
+      setIsDownloading(false);
+      return;
+    }
     
     // Dynamically import gifenc
     const { GIFEncoder, quantize, applyPalette } = await import('gifenc');
@@ -666,24 +692,35 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     ctx.clip();
 
     // Load and draw the background image
-    const bgImage = new Image();
+    const bgImage = new window.Image();
     bgImage.crossOrigin = "anonymous";
     bgImage.src = letterBgImage;
     
-    await new Promise((resolve, reject) => {
+    await new Promise((resolve) => {
       bgImage.onload = resolve;
-      bgImage.onerror = reject;
+      bgImage.onerror = () => {
+        bgImage.removeAttribute("crossorigin");
+        bgImage.src = letterBgImage;
+        bgImage.onload = resolve;
+        bgImage.onerror = resolve;
+      };
     });
 
     // Draw background image
-    ctx.drawImage(bgImage, 0, 0, cardSize.width, cardSize.height);
+    if (bgImage.complete && bgImage.naturalWidth > 0) {
+      ctx.drawImage(bgImage, 0, 0, cardSize.width, cardSize.height);
+    }
 
     // Draw the text overlay
     if (letterText) {
-      // Load the Pacifico font
-      const font = new FontFace('Pacifico', 'url(https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBp0u-.woff2)');
-      await font.load();
-      document.fonts.add(font);
+      try {
+        // Load the Pacifico font
+        const font = new FontFace('Pacifico', 'url(https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBp0u-.woff2)');
+        await font.load();
+        document.fonts.add(font);
+      } catch (err) {
+        console.warn("Failed to load font:", err);
+      }
 
       ctx.save();
       // Calculate text area dimensions
@@ -799,7 +836,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     if (mapping) {
       for (let i = 0; i < mapping.windows.length; i++) {
         const win = mapping.windows[i];
-        const img = new Image();
+        const img = new window.Image();
         img.crossOrigin = "anonymous";
         img.src = images[i];
         await new Promise((resolve) => {
@@ -836,7 +873,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
       }
       // Draw strip overlay
       if (selectedDesign?.url) {
-        const overlay = new Image();
+        const overlay = new window.Image();
         overlay.crossOrigin = "anonymous";
         overlay.src = selectedDesign.url;
         await new Promise((resolve) => {
@@ -875,20 +912,32 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     ctx.closePath();
     ctx.clip();
     // Draw letter background
-    const bgImage = new Image();
+    const bgImage = new window.Image();
     bgImage.crossOrigin = "anonymous";
     bgImage.src = letterBgImage;
-    await new Promise((resolve, reject) => {
+    await new Promise((resolve) => {
       bgImage.onload = resolve;
-      bgImage.onerror = reject;
+      bgImage.onerror = () => {
+        bgImage.removeAttribute("crossorigin");
+        bgImage.src = letterBgImage;
+        bgImage.onload = resolve;
+        bgImage.onerror = resolve;
+      };
     });
-    ctx.drawImage(bgImage, 0, 0, cardSize.width * scale, cardSize.height * scale);
+    
+    if (bgImage.complete && bgImage.naturalWidth > 0) {
+      ctx.drawImage(bgImage, 0, 0, cardSize.width * scale, cardSize.height * scale);
+    }
     // Draw the text overlay
     if (letterText) {
-      // Load the Pacifico font
-      const font = new FontFace('Pacifico', 'url(https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBp0u-.woff2)');
-      await font.load();
-      document.fonts.add(font);
+      try {
+        // Load the Pacifico font
+        const font = new FontFace('Pacifico', 'url(https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBp0u-.woff2)');
+        await font.load();
+        document.fonts.add(font);
+      } catch (err) {
+        console.warn("Failed to load font:", err);
+      }
       // Match the exact styling from the textarea
       const fontSize = Math.max(18, cardSize.width * 0.056) * scale;
       ctx.font = `${fontSize}px Pacifico, cursive`;
@@ -934,10 +983,6 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
       }
     }
     ctx.restore();
-
-    // Draw strip first, then card on top
-    await drawStrip(ctx);
-    await drawCard(ctx);
 
     // Download the composite canvas as PNG
     const dataUrl = canvas.toDataURL('image/png');
@@ -1355,6 +1400,10 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     if (!showInstructions) setFolderPaused(false);
   }, [showInstructions]);
 
+  const backgroundImage = isMobile && isPortrait
+    ? "url('./images/customize_bg.png')"
+    : "url('./images/strip_design_wide.png')";
+
   if (showLetterOverlay) {
     // Responsive card style for mobile portrait
     let mobileCardStyle = { ...cardStyle };
@@ -1405,6 +1454,11 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
         onTouchMove={e => { handleDrag(e); handleResize(e); handleTextBoxDrag(e); handleTextBoxRotate(e); handleTextBoxResize(e); }}
         onTouchEnd={() => { handleDragEnd(); handleResizeEnd(); handleTextBoxDragEnd(); handleTextBoxRotateEnd(); handleTextBoxResizeEnd(); }}
       >
+        {/* Background Image Overlay */}
+        <div
+          className="absolute inset-0 w-full h-full bg-center bg-cover bg-no-repeat z-0 pointer-events-none"
+          style={{ backgroundImage }}
+        ></div>
         {/* Only scale the preview, not the buttons */}
         <div style={{ transform: `scale(${previewScale})`, transformOrigin: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
           {/* Photo preview always visible on the left */}
@@ -1590,21 +1644,21 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
         {isMobile && isPortrait ? (
           <div className="fixed bottom-4 left-1/2 -translate-x-1/2 flex flex-row flex-wrap gap-2 z-50 w-full px-2 justify-center" style={{...mobileButtonRowStyle, flexDirection: 'row', gap: '6px', padding: 0, margin: 0}}>
             <button
-              className="px-2 py-1 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow text-xs min-w-[90px]"
+              className={`px-2 py-1 rounded-full bg-gradient-to-r ${colors.primaryGradient} text-white font-bold shadow hover:${colors.primaryGradientHover} transition-all text-xs min-w-[90px]`}
               onClick={handleDownloadWithDisclaimer}
               style={{fontSize: '13px', padding: '8px 10px'}}
             >
               Download Letter
             </button>
             <button
-              className="px-2 py-1 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow text-xs min-w-[90px]"
+              className={`px-2 py-1 rounded-full bg-gradient-to-r ${colors.primaryGradient} text-white font-bold shadow hover:${colors.primaryGradientHover} transition-all text-xs min-w-[90px]`}
               onClick={handleDownloadLetterAndStripWithDisclaimer}
               style={{fontSize: '13px', padding: '8px 10px'}}
             >
               Download Letter + Strip
             </button>
             <button
-              className="px-2 py-1 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow text-xs min-w-[90px]"
+              className={`px-2 py-1 rounded-full bg-gradient-to-r ${colors.primaryGradient} text-white font-bold shadow hover:${colors.primaryGradientHover} transition-all text-xs min-w-[90px]`}
               onClick={handleDownloadStripWithDisclaimer}
               style={{fontSize: '13px', padding: '8px 10px'}}
             >
@@ -1617,19 +1671,19 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
         ) : (
           <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex gap-4 z-50">
             <button
-              className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow hover:from-pink-500 hover:to-pink-700 transition-all text-sm"
+              className={`px-6 py-3 rounded-full bg-gradient-to-r ${colors.primaryGradient} text-white font-bold shadow hover:${colors.primaryGradientHover} transition-all text-sm`}
               onClick={handleDownloadWithDisclaimer}
             >
               Download Letter
             </button>
             <button
-              className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow hover:from-pink-500 hover:to-pink-700 transition-all text-sm"
+              className={`px-6 py-3 rounded-full bg-gradient-to-r ${colors.primaryGradient} text-white font-bold shadow hover:${colors.primaryGradientHover} transition-all text-sm`}
               onClick={handleDownloadLetterAndStripWithDisclaimer}
             >
               Download Letter + Strip
             </button>
             <button
-              className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold shadow hover:from-pink-500 hover:to-pink-700 transition-all text-sm"
+              className={`px-6 py-3 rounded-full bg-gradient-to-r ${colors.primaryGradient} text-white font-bold shadow hover:${colors.primaryGradientHover} transition-all text-sm`}
               onClick={handleDownloadStripWithDisclaimer}
             >
               Download Strip
@@ -1847,10 +1901,12 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
   };
 
   // Normal strip design UI
-  let mainContainerStyle = { position: 'relative' };
+  const mainContainerStyle = {
+    position: 'relative',
+  };
+
   if (isMobile && isPortrait) {
-    mainContainerStyle = {
-      ...mainContainerStyle,
+    Object.assign(mainContainerStyle, {
       width: '100%',
       minHeight: '100svh',
       overflowX: 'hidden',
@@ -1860,15 +1916,18 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      background: colors.background,
-    };
+    });
   }
 
   return (
-    <div className={`flex flex-col w-full min-h-[100svh] justify-center items-center ${colors.background} overflow-hidden`}
+    <div className={`flex flex-col md:flex-row w-full min-h-[100svh] justify-center items-center overflow-hidden gap-0 md:gap-12 md:p-8`}
       style={mainContainerStyle}
     >
-      <div className="flex-shrink-0 transition-transform duration-500 ease-in-out pb-12" style={{ transform: showControls ? 'scale(0.85) translateY(-5vh)' : 'scale(1) translateY(0)' }}>
+      <div
+        className="absolute inset-0 w-full h-full bg-center bg-cover bg-no-repeat z-0"
+        style={{ backgroundImage }}
+      ></div>
+      <div className={`relative z-10 flex-shrink-0 transition-transform duration-500 ease-in-out pb-12 md:pb-0 ${showControls ? 'scale-[0.85] -translate-y-[5vh] md:scale-100 md:translate-y-0' : 'scale-100 translate-y-0'}`}>
         <PhotoLayoutCard
           images={images}
         filters={cssFilters}
@@ -1877,12 +1936,11 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
         />
       </div>
       <div 
-        className="fixed bottom-0 left-0 w-full z-50 transition-transform duration-500 ease-in-out flex flex-col items-center"
-        style={{ transform: showControls ? 'translateY(0)' : 'translateY(calc(100% - 44px))' }}
+        className={`fixed bottom-0 left-0 w-full z-50 md:relative md:bottom-auto md:left-auto md:w-[450px] md:z-10 transition-transform duration-500 ease-in-out flex flex-col items-center ${showControls ? 'translate-y-0' : 'translate-y-[calc(100%-44px)] md:translate-y-0'}`}
       >
         <button 
           onClick={() => setShowControls(!showControls)}
-          className={`relative w-full max-w-[90vw] sm:min-w-[340px] md:max-w-md h-11 bg-gradient-to-r ${colors.primaryGradient} flex justify-center items-center rounded-t-2xl shadow-[0_-4px_15px_rgba(0,0,0,0.15)] focus:outline-none transition-all hover:brightness-110`}
+          className={`md:hidden relative w-full h-11 bg-gradient-to-r ${colors.primaryGradient} flex justify-center items-center rounded-t-2xl shadow-[0_-4px_15px_rgba(0,0,0,0.15)] focus:outline-none transition-all hover:brightness-110`}
         >
           <span className="text-white font-bold text-sm tracking-widest uppercase drop-shadow-sm">
             {showControls ? "Hide Controls" : "Customize Strip 💗"}
@@ -1895,7 +1953,7 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
             )}
           </div>
         </button>
-        <div className={`relative z-10 w-full max-w-[90vw] sm:min-w-[340px] md:max-w-md bg-white p-4 md:p-8 shadow-2xl max-h-[75vh] overflow-y-auto`}>
+        <div className={`relative z-10 w-full bg-white p-4 md:p-8 shadow-2xl md:shadow-xl md:rounded-3xl max-h-[75vh] md:max-h-[85vh] overflow-y-auto`}>
           {/* Download type dropdown */}
           <div className="mb-4 flex justify-center md:justify-end">
             <select
