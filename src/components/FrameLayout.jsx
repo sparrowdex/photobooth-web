@@ -40,7 +40,7 @@ export default function FrameLayout({ images, mapping, filters }) {
               style={{
                 width: "100%",
                 height: "100%",
-                objectFit: "cover",
+                objectFit: win.objectFit || "cover",
                 objectPosition: "center",
                 display: "block",
                 filter: filters && filters[idx] ? filters[idx] : "none",

@@ -78,7 +78,34 @@ const frameMappings = {
     frameWidth: 500,
     frameHeight: 330,
     windows: [
-      { left: 35, top: 55, width: 200, height: 235, borderRadius: 0 }
+      { left: 240, top: 40, width: 220, height: 240, borderRadius: 0 }
+    ],
+  },
+  "1shot-design11": {
+    frame: "/designs/1shot-design11.png",
+    frameWidth: 550,
+    frameHeight: 500,
+    windows: [
+      // Placeholder coordinates, adjust to fit your design
+      { left: 25, top: 25, width: 500, height: 400, borderRadius: 0 }
+    ],
+  },
+  "1shot-design12": {
+    frame: "/designs/1shot-design12.png",
+    frameWidth: 500,
+    frameHeight: 600,
+    windows: [
+      // Placeholder coordinates, adjust to fit your design
+      { left: 60, top: 85, width: 355, height: 400, borderRadius: 0 }
+    ],
+  },
+  "1shot-design13": {
+    frame: "/designs/1shot-design13.png",
+    frameWidth: 500,
+    frameHeight: 500,
+    windows: [
+      // Placeholder coordinates, adjust to fit your design
+      { left: 80, top: 155, width: 300, height: 225, borderRadius: 0 }
     ],
   },
 
@@ -88,8 +115,8 @@ const frameMappings = {
     frameHeight: 1000,
     windows: [
       { left: 65, top: 10, width: 317, height: 280, borderRadius: 24 },
-      { left: 65, top: 345, width: 317, height: 280, borderRadius: 24 },
-      { left: 65, top: 680, width: 317, height: 280, borderRadius: 24 },
+      { left: 65, top: 300, width: 317, height: 250, borderRadius: 24 },
+      { left: 65, top: 560, width: 317, height: 280, borderRadius: 24 },
     ],
   },
   "3shot-design2": {
@@ -112,15 +139,15 @@ const frameMappings = {
       { left: 20, top: 710, width: 450, height: 340, borderRadius: 24 },
     ],
   },
-  
+
   "3shot-design4": {
     frame: "/designs/3shot-design4.png",
-    frameWidth: 350,
-    frameHeight: 1100,
+    frameWidth: 400,
+    frameHeight: 900,
     windows: [
-      { left: 40, top: 95, width: 250, height: 225, borderRadius: 24 },
-      { left: 40, top: 300, width: 300, height: 325, borderRadius: 24 },
-      { left: 30, top: 680, width: 300, height: 330, borderRadius: 10 },
+      { left: 80, top: 25, width: 250, height: 250, borderRadius: 0 },
+      { left: 80, top: 293, width: 250, height: 250, borderRadius: 0 },
+      { left: 80, top: 563, width: 250, height: 250, borderRadius: 0 },
     ],
   },
   "3shot-design5": {
@@ -144,6 +171,39 @@ const frameMappings = {
       { left: 55, top: 710, width: 350, height: 280, borderRadius: 0 },
     ],
   },
+  "3shot-design7": {
+    frame: "/designs/3shot-design7.png",
+    frameWidth: 480,
+    frameHeight: 1000,
+    windows: [
+      // Placeholder coordinates, adjust to fit your design
+      { left: 95, top: 50, width: 270, height: 260, borderRadius: 0 },
+      { left: 95, top: 300, width: 270, height: 240, borderRadius: 0 },
+      { left: 95, top: 545, width: 270, height: 240, borderRadius: 0 },
+    ],
+  },
+  "3shot-design8": {
+    frame: "/designs/3shot-design8.png",
+    frameWidth: 470,
+    frameHeight: 1020,
+    windows: [
+      // Placeholder coordinates, adjust to fit your design
+      { left: 69, top: 30, width: 340, height: 270, borderRadius: 0 },
+      { left: 69, top: 370, width: 340, height: 280, borderRadius: 0 },
+      { left: 69, top: 710, width: 340, height: 280, borderRadius: 0 },
+    ],
+  },
+  // "3shot-design9": {
+  //   frame: "/designs/3shot-design9.png",
+  //   frameWidth: 470,
+  //   frameHeight: 1020,
+  //   windows: [
+  //     // Placeholder coordinates, adjust to fit your design
+  //     { left: 55, top: 50, width: 350, height: 280, borderRadius: 0 },
+  //     { left: 55, top: 380, width: 350, height: 280, borderRadius: 0 },
+  //     { left: 55, top: 710, width: 350, height: 280, borderRadius: 0 },
+  //   ],
+  // },
   "4shot-design1": {
     frame: "/designs/4shot-design1.png",
     frameWidth: 525,
@@ -197,6 +257,42 @@ const frameMappings = {
       { left: 70, top: 330, width: 383, height: 290, borderRadius: 24 },
       { left: 70, top: 930, width: 383, height: 290, borderRadius: 24 },
       { left: 70, top: 645, width: 383, height: 290, borderRadius: 24 },
+    ],
+  },
+  "4shot-design6": {
+    frame: "/designs/4shot-design6.png",
+    frameWidth: 525,
+    frameHeight: 1259,
+    windows: [
+      // Placeholder coordinates, adjust to fit your design
+      { left: 80, top: 25, width: 365, height: 290, borderRadius: 0 },
+      { left: 80, top: 330, width: 365, height: 290, borderRadius: 0 },
+      { left: 80, top: 645, width: 365, height: 290, borderRadius: 0 },
+      { left: 80, top: 930, width: 365, height: 290, borderRadius: 0 },
+    ],
+  },
+  "4shot-design7": {
+    frame: "/designs/4shot-design7.png",
+    frameWidth: 525,
+    frameHeight: 1259,
+    windows: [
+      // Placeholder coordinates, adjust to fit your design
+      { left: 80, top: 25, width: 365, height: 268, borderRadius: 0 },
+      { left: 80, top: 295, width: 365, height: 260, borderRadius: 0 },
+      { left: 80, top: 560, width: 365, height: 260, borderRadius: 0 },
+      { left: 80, top: 800, width: 365, height: 260, borderRadius: 0 },
+    ],
+  },
+  "4shot-design8": {
+    frame: "/designs/4shot-design8.png",
+    frameWidth: 525,
+    frameHeight: 1259,
+    windows: [
+      // Placeholder coordinates, adjust to fit your design
+      { left: 80, top: 25, width: 365, height: 250, borderRadius: 0 },
+      { left: 80, top: 275, width: 365, height: 260, borderRadius: 0 },
+      { left: 80, top: 550, width: 365, height: 260, borderRadius: 0 },
+      { left: 80, top: 820, width: 365, height: 260, borderRadius: 0 },
     ],
   },
   "6shot-design1": {
@@ -256,6 +352,6 @@ const frameMappings = {
 };
 export default frameMappings;
 //[fixed]current problem: Photo is mapped but after downloading some of them get stretched(updated download logic in stripdesign)
-//solution: add a feature where if the photo excedds the photo overlay, the exceeded part disappears 
+//solution: add a feature where if the photo excedds the photo overlay, the exceeded part disappears
 //solution: choose photo frames with more feasible mapping to the original 640x480 camera view
 //[fixed]problem:if zoom more than 50% the 3shot designs exceed the webpage, need to fix that (now fixed with 2 designs per page)

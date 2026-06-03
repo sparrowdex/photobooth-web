@@ -20,7 +20,10 @@ const designOverlaysByLayout = {
     { key: "1shot-design7", url: "/designs/1shot-design7.png" },
     { key: "1shot-design8", url: "/designs/1shot-design8.png" },
     { key: "1shot-design9", url: "/designs/1shot-design9.png" },
-    { key: "1shot-design10", url: "/designs/1shot-design10.png" }
+    { key: "1shot-design10", url: "/designs/1shot-design10.png" },
+    { key: "1shot-design11", url: "/designs/1shot-design11.png" },
+    { key: "1shot-design12", url: "/designs/1shot-design12.png" },
+    { key: "1shot-design13", url: "/designs/1shot-design13.png" }
     // Removed letter from design selection
   ],
   3: [
@@ -30,7 +33,10 @@ const designOverlaysByLayout = {
     { key: "3shot-design4", url: "/designs/3shot-design4.png" },
     { key: "3shot-design5", url: "/designs/3shot-design5.png" },
     { key: "3shot-design6", url: "/designs/3shot-design6.png" },
-    
+    { key: "3shot-design7", url: "/designs/3shot-design7.png" },
+    { key: "3shot-design8", url: "/designs/3shot-design8.png" }
+    // { key: "3shot-design9", url: "/designs/3shot-design9.png" }
+
   ],
   4: [
     { key: "4shot-design1", url: "/designs/4shot-design1.png" },
@@ -38,13 +44,15 @@ const designOverlaysByLayout = {
     { key: "4shot-design3", url: "/designs/4shot-design3.png" },
     { key: "4shot-design4", url: "/designs/4shot-design4.png" },
     { key: "4shot-design5", url: "/designs/4shot-design5.png" },
-   
+    { key: "4shot-design6", url: "/designs/4shot-design6.png" },
+    { key: "4shot-design7", url: "/designs/4shot-design7.png" },
+    { key: "4shot-design8", url: "/designs/4shot-design8.png" }
+
   ],
   6: [
     { key: "6shot-design1", url: "/designs/6shot-design1.png" },
     { key: "6shot-design2", url: "/designs/6shot-design2.png" },
     { key: "6shot-design3", url: "/designs/6shot-design3.png" }
-    
 
   ],
 };
