@@ -27,3 +27,9 @@
 ### Fixed
 - Fixed GIF letterboxing on mobile by dynamically swapping `gifWidth` and `gifHeight` in `gifshot` when the device is in portrait mode.
 - Fixed background styling in the Letter Design view to correctly display the portrait background image on mobile devices.
+
+## [1.0.3-mobile] - 2026-06-10
+
+### Fixed
+- Fixed a race condition where rapidly capturing multiple shots caused background GIF generation to overwrite the incorrect image index, permanently preventing progression to the Design screen.
+- Fixed a silent download freeze (most prominent on multi-shot designs like 3-shot) that occurred when Android/iOS WebViews triggered strict CORS blocks on repeated Base64 data URIs. Removed `crossOrigin="anonymous"` and implemented `onerror` fallbacks to ensure Canvas rendering completes successfully.

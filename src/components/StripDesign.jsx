@@ -62,7 +62,7 @@ function DesignGrid({ designs, selectedDesign, onSelectDesign }) {
             }`}
             onClick={() => onSelectDesign(design)}
           >
-            <img src={design.url} alt={design.key} className="w-full h-auto mx-auto" />
+            <img src={design.url} alt={design.key} className="w-full h-auto mx-auto" loading="lazy" />
           </div>
         ))}
       </div>
@@ -168,7 +168,7 @@ const downloadFile = async (data, filename, showDisclaimer) => {
         directory: Directory.Documents,
       });
       // Simple alert, can be replaced with a nicer UI Toast component
-      alert('Saved to Documents folder!');
+      alert('Saved to Gallery!');
     } catch (e) {
       console.error('Unable to save file', e);
       alert(`Error saving file: ${e.message}`);
@@ -423,7 +423,9 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
       for (let i = 0; i < mapping.windows.length; i++) {
         const win = mapping.windows[i];
         const img = new window.Image();
-        img.crossOrigin = "anonymous";
+        if (!images[i].startsWith('data:')) {
+          img.crossOrigin = "anonymous";
+        }
         img.src = images[i];
         await new Promise((resolve) => {
           img.onload = () => {
@@ -453,6 +455,10 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
             ctx.filter = "none";
             resolve();
           };
+          img.onerror = () => {
+            console.error("Failed to load photo", i);
+            resolve();
+          };
         });
       }
       // Draw overlay
@@ -463,6 +469,10 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
         await new Promise((resolve) => {
           overlay.onload = () => {
             ctx.drawImage(overlay, 0, 0, width, height);
+            resolve();
+          };
+          overlay.onerror = () => {
+            console.error("Failed to load overlay");
             resolve();
           };
         });
@@ -481,7 +491,9 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
       const rows = Math.ceil(images.length / columns);
       for (let i = 0; i < images.length; i++) {
         const img = new window.Image();
-        img.crossOrigin = "anonymous";
+        if (!images[i].startsWith('data:')) {
+          img.crossOrigin = "anonymous";
+        }
         img.src = images[i];
         await new Promise((resolve) => {
           img.onload = () => {
@@ -494,6 +506,10 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
             ctx.filter = "none";
             resolve();
           };
+          img.onerror = () => {
+            console.error("Failed to load photo in fallback", i);
+            resolve();
+          };
         });
       }
       if (selectedDesign?.url) {
@@ -503,6 +519,10 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
         await new Promise((resolve) => {
           overlay.onload = () => {
             ctx.drawImage(overlay, 0, 0, width, height);
+            resolve();
+          };
+          overlay.onerror = () => {
+            console.error("Failed to load overlay in fallback");
             resolve();
           };
         });
@@ -624,6 +644,10 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
             drawImageCover(ctx, img, win.left, win.top, win.width, win.height);
             ctx.restore();
             ctx.filter = "none";
+            resolve();
+          };
+          img.onerror = () => {
+            console.error("Failed to load gif frame photo", i);
             resolve();
           };
         });

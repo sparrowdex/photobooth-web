@@ -144,6 +144,10 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     let recorder = null;
     let chunks = [];
     if (countdown === 3) {
+      // Capture the correct index for this specific shot to avoid race conditions
+      // where the user takes the next shot before the current GIF is done generating.
+      const currentShotIndex = captured.length;
+      
       // Start recording at the beginning of countdown
       setRecordedChunks([]); // Reset for each shot
       const video = document.querySelector("video");
@@ -172,10 +176,10 @@ export default function CameraSetup({ layout, onBack, onDone }) {
             frameDuration: 0.2,
           }, function(obj) {
             setCaptured((prev) => {
-              // Update the last entry with the gif
+              // Update the SPECIFIC entry with the gif using the index we captured
               const updated = [...prev];
-              if (updated.length > 0) {
-                updated[updated.length - 1] = { ...updated[updated.length - 1], gif: obj.image };
+              if (updated[currentShotIndex]) {
+                updated[currentShotIndex] = { ...updated[currentShotIndex], gif: obj.image };
               }
               return updated;
             });
@@ -250,8 +254,8 @@ export default function CameraSetup({ layout, onBack, onDone }) {
   }
 
   const backgroundImage = isMobile && !isLandscape
-    ? "url('./images/customize_bg.png')"
-    : "url('./images/strip_design_wide.png')";
+    ? "url('./images/customize_bg.webp')"
+    : "url('./images/strip_design_wide.webp')";
 
   return (
     <div className="flex flex-col items-center relative w-full min-h-[100svh] bg-transparent overflow-x-hidden py-4 md:py-8 px-2 md:px-4">

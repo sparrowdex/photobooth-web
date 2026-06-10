@@ -32,7 +32,14 @@ All notable changes to this project will be documented in this file.
 - Disabled the custom "Shooting Star" floating cursor on mobile devices.
 
 ### Fixed
+- Fixed a race condition in `CameraSetup.jsx` where taking multi-shots rapidly caused asynchronous GIF processing to overwrite the wrong image index, permanently freezing the "Choose Strip Design" button.
+- Fixed an intermittent "silent freeze" bug when downloading multi-shot layouts (like 3-shot) caused by iOS/Android WebViews aggressively blocking cross-origin data URI loads. Removed `crossOrigin="anonymous"` from Base64 images and added `onerror` fallback handling to prevent the download Promises from hanging.
 - Corrected CSS styling in `FrameLayout.jsx` to ensure frame overlays and photo windows are sized and positioned correctly based on `frameMappings.js`.
 - Fixed the absolute positioning jumping issue for the Back button in `AppLayout` by adjusting container heights.
 - Fixed `NextButton` ignoring the `disabled` prop state, ensuring the download button correctly disables while processing.
 - Standardized download buttons in the `StripDesign` letter overlay to use the primary pink gradient theme.
+
+### Performance
+- Migrated heavy `.png` assets in the `/images/` directory to `.webp` format to drastically reduce loading times.
+- Added `<link rel="preload">` tags in `index.html` for main background assets to prevent layout flash.
+- Implemented `loading="lazy"` on paginated `DesignGrid` image thumbnails to speed up initial Strip Design loading.
