@@ -31,12 +31,14 @@ function useLandscape() {
 
 // Helper: detect mobile device
 function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof navigator === "undefined") return false;
+    return /Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+  });
   useEffect(() => {
     const check = () => {
       setIsMobile(/Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent));
     };
-    check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
@@ -47,14 +49,12 @@ export default function CameraSetup({ layout, onBack, onDone }) {
   const { colors } = useTheme();
   const shots = layout?.shots || 1;
   const cameraRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
   const [captured, setCaptured] = useState([]);
   const [step, setStep] = useState("start"); // 'start', 'preview', 'countdown', 'done'
   const [showInstructions, setShowInstructions] = useState(false);
   const [countdown, setCountdown] = useState(null);
   const [cameraSize, setCameraSize] = useState({ width: 640, height: 480 });
-  const [mediaRecorder, setMediaRecorder] = useState(null);
-  const [recordedChunks, setRecordedChunks] = useState([]);
-  const [isRecording, setIsRecording] = useState(false);
   const [facingMode, setFacingMode] = useState("user");
   const [numberOfCameras, setNumberOfCameras] = useState(0);
 
@@ -74,120 +74,60 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     return () => window.removeEventListener('resize', updateCameraSize);
   }, []);
 
-  const startRecording = useCallback(async () => {
-    if (!cameraRef.current) return;
-    
-    setRecordedChunks([]);
-    const stream = cameraRef.current.takePhotoStream();
-    if (!stream) return;
-    
-    try {
-      const options = { mimeType: 'video/webm;codecs=vp9' };
-      const mediaRecorder = new MediaRecorder(stream, options);
-      let chunks = [];
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunks.push(event.data);
-        }
-      };
-      
-      mediaRecorder.onstop = async () => {
-        const blob = new Blob(chunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        
-        // Dynamically import gifshot
-        const gifshot = (await import('gifshot')).default;
-        
-        const gWidth = isMobile && !isLandscape ? 480 : 640;
-        const gHeight = isMobile && !isLandscape ? 640 : 480;
-
-        gifshot.createGIF({
-          video: [url],
-          gifWidth: gWidth,
-          gifHeight: gHeight,
-          frameDuration: 0.1,
-          progressCallback: function(progress) {
-            console.log('GIF creation progress:', progress);
-          }
-        }, function(obj) {
-          if (!obj.error) {
-            setCaptured((prev) => {
-              const updated = [...prev, { photo: cameraRef.current.takePhoto(), gif: obj.image }];
-              return updated;
-            });
-            if (mediaRecorder) {
-              mediaRecorder.stop();
-            }
-            if (captured.length + 1 < shots) {
-              setStep("preview");
-            } else {
-              setStep("done");
-            }
-          } else {
-            console.error('GIF creation error:', obj.error);
-          }
-          URL.revokeObjectURL(url);
-        });
-      };
-      
-      mediaRecorder.start();
-      setMediaRecorder(mediaRecorder);
-      setIsRecording(true);
-    } catch (error) {
-      console.error('Error starting recording:', error);
-    }
-  }, [shots, cameraRef, setCaptured, setStep, isMobile, isLandscape]);
-
   // Countdown logic
   useEffect(() => {
     if (countdown === null) return;
-    let recorder = null;
-    let chunks = [];
     if (countdown === 3) {
       // Capture the correct index for this specific shot to avoid race conditions
       // where the user takes the next shot before the current GIF is done generating.
       const currentShotIndex = captured.length;
       
-      // Start recording at the beginning of countdown
-      setRecordedChunks([]); // Reset for each shot
       const video = document.querySelector("video");
       if (video) {
-        const stream = video.captureStream();
-        recorder = new window.MediaRecorder(stream, { mimeType: "video/webm" });
-        recorder.ondataavailable = (e) => {
-          if (e.data.size > 0) chunks.push(e.data);
-        };
-        recorder.onstop = async () => {
-          // Create GIF from video
-          const videoBlob = new Blob(chunks, { type: "video/webm" });
-          const url = URL.createObjectURL(videoBlob);
-          
-          // Dynamically import gifshot
-          const gifshot = (await import('gifshot')).default;
-          
-          const gWidth = isMobile && !isLandscape ? 240 : 320;
-          const gHeight = isMobile && !isLandscape ? 320 : 240;
+        let chunks = [];
+        const stream = video.captureStream ? video.captureStream() : (video.mozCaptureStream ? video.mozCaptureStream() : null);
+        if (stream) {
+          try {
+            const recorder = new window.MediaRecorder(stream, { mimeType: "video/webm" });
+            recorder.ondataavailable = (e) => {
+              if (e.data.size > 0) chunks.push(e.data);
+            };
+            recorder.onstop = async () => {
+              // Create GIF from video
+              const videoBlob = new Blob(chunks, { type: "video/webm" });
+              const url = URL.createObjectURL(videoBlob);
+              
+              // Dynamically import gifshot
+              const gifshot = (await import('gifshot')).default;
+              
+              const gWidth = isMobile && !isLandscape ? 240 : 320;
+              const gHeight = isMobile && !isLandscape ? 320 : 240;
 
-          gifshot.createGIF({
-            video: [url],
-            gifWidth: gWidth,
-            gifHeight: gHeight,
-            numFrames: 10,
-            frameDuration: 0.2,
-          }, function(obj) {
-            setCaptured((prev) => {
-              // Update the SPECIFIC entry with the gif using the index we captured
-              const updated = [...prev];
-              if (updated[currentShotIndex]) {
-                updated[currentShotIndex] = { ...updated[currentShotIndex], gif: obj.image };
-              }
-              return updated;
-            });
-            URL.revokeObjectURL(url);
-          });
-        };
-        recorder.start();
-        setMediaRecorder(recorder);
+              gifshot.createGIF({
+                video: [url],
+                gifWidth: gWidth,
+                gifHeight: gHeight,
+                numFrames: 10,
+                frameDuration: 0.2,
+              }, function(obj) {
+                if (obj && obj.image) {
+                  setCaptured((prev) => {
+                    const updated = [...prev];
+                    if (updated[currentShotIndex]) {
+                      updated[currentShotIndex] = { ...updated[currentShotIndex], gif: obj.image };
+                    }
+                    return updated;
+                  });
+                }
+                URL.revokeObjectURL(url);
+              });
+            };
+            recorder.start();
+            mediaRecorderRef.current = recorder;
+          } catch (err) {
+            console.error("Failed to start MediaRecorder:", err);
+          }
+        }
       }
     }
     if (countdown === 0) {
@@ -195,8 +135,8 @@ export default function CameraSetup({ layout, onBack, onDone }) {
         if (cameraRef.current) {
           const photo = cameraRef.current.takePhoto();
           setCaptured((prev) => [...prev, { photo, gif: null }]);
-          if (mediaRecorder) {
-            mediaRecorder.stop();
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+            mediaRecorderRef.current.stop();
           }
           if (captured.length + 1 < shots) {
             setStep("preview");
@@ -210,10 +150,17 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     }
     const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
-  }, [countdown, shots, isMobile, isLandscape]);
+  }, [countdown, shots, isMobile, isLandscape, captured.length]);
 
   // Reset session
   const handleStartOrRetake = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (e) {
+        // ignore
+      }
+    }
     setCaptured([]);
     setStep("start");
     setCountdown(null);

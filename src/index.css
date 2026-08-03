@@ -50,12 +50,137 @@ body {
   from { opacity: 1; transform: translateY(0) scale(1) rotate(0deg);}
   to   { opacity: 0; transform: translateY(-40px) scale(0.96) rotate(3deg);}
 }
-.card-enter {
-  animation: card-in 0.4s cubic-bezier(.4,0,.2,1);
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
 }
-.card-exit {
-  animation: card-out 0.4s cubic-bezier(.4,0,.2,1);
+@keyframes floatSlowReverse {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(8px); }
 }
+.animate-float-left {
+  animation: floatSlow 4s ease-in-out infinite;
+}
+.animate-float-right {
+  animation: floatSlowReverse 4.5s ease-in-out infinite;
+}
+
+@keyframes shine {
+  0% { transform: translateX(-150%) skewX(-20deg); }
+  50%, 100% { transform: translateX(250%) skewX(-20deg); }
+}
+.animate-shine {
+  animation: shine 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { 
+    box-shadow: 0 10px 25px -4px rgba(236, 72, 153, 0.45), 0 0 15px rgba(244, 114, 182, 0.3);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 16px 36px -2px rgba(236, 72, 153, 0.7), 0 0 28px rgba(244, 114, 182, 0.5);
+    transform: scale(1.015);
+  }
+}
+.animate-glow {
+  animation: glowPulse 2.6s ease-in-out infinite;
+}
+
+@keyframes floatSubtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+.animate-float-subtle {
+  animation: floatSubtle 3.5s ease-in-out infinite;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.crystal-glass {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0.12) 60%, rgba(255, 255, 255, 0.22) 100%);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-top: 1px solid rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 2px 0 rgba(0, 0, 0, 0.1),
+    0 8px 24px -4px rgba(0, 0, 0, 0.2),
+    0 2px 8px rgba(219, 39, 119, 0.2);
+}
+
+.crystal-glass:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.48) 0%, rgba(255, 255, 255, 0.18) 60%, rgba(255, 255, 255, 0.32) 100%);
+  border-top: 1px solid #ffffff;
+  box-shadow: 
+    inset 0 1px 2px 0 #ffffff,
+    inset 0 -1px 2px 0 rgba(0, 0, 0, 0.1),
+    0 12px 30px -4px rgba(0, 0, 0, 0.25),
+    0 0 18px rgba(255, 255, 255, 0.5);
+}
+
+.pink-crystal-btn {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.42) 0%, rgba(244, 114, 182, 0.32) 45%, rgba(219, 39, 119, 0.38) 100%);
+  backdrop-filter: blur(20px) saturate(190%);
+  -webkit-backdrop-filter: blur(20px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-top: 1.5px solid rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 
+    inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1.5px 3px 0 rgba(0, 0, 0, 0.1),
+    0 12px 32px -4px rgba(219, 39, 119, 0.45),
+    0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.pink-crystal-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.52) 0%, rgba(244, 114, 182, 0.42) 45%, rgba(219, 39, 119, 0.48) 100%);
+  border-top: 1.5px solid #ffffff;
+  box-shadow: 
+    inset 0 2px 3px 0 #ffffff,
+    inset 0 -1.5px 3px 0 rgba(0, 0, 0, 0.1),
+    0 16px 40px -4px rgba(219, 39, 119, 0.6),
+    0 0 22px rgba(255, 255, 255, 0.45);
+}
+
+.glass-shot-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.14) 50%, rgba(255, 255, 255, 0.28) 100%);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-top: 1.5px solid rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 
+    inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1.5px 3px 0 rgba(0, 0, 0, 0.08),
+    0 10px 25px -4px rgba(0, 0, 0, 0.15),
+    0 2px 8px rgba(219, 39, 119, 0.2);
+}
+
+.glass-shot-card:hover {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.54) 0%, rgba(255, 255, 255, 0.22) 50%, rgba(255, 255, 255, 0.38) 100%);
+  border-top: 1.5px solid #ffffff;
+  box-shadow: 
+    inset 0 2px 3px 0 #ffffff,
+    inset 0 -1.5px 3px 0 rgba(0, 0, 0, 0.1),
+    0 16px 36px -4px rgba(219, 39, 119, 0.4),
+    0 0 20px rgba(255, 255, 255, 0.5);
+}
+
 body {
   overflow-x: hidden;
+}
+
+/* Hide default cursor on desktop pointer devices so only custom wand cursor is visible */
+@media (hover: hover) and (pointer: fine) {
+  html, body, button, a, input, select, textarea, [role="button"] {
+    cursor: none !important;
+  }
 }

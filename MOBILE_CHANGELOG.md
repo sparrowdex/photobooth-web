@@ -33,3 +33,12 @@
 ### Fixed
 - Fixed a race condition where rapidly capturing multiple shots caused background GIF generation to overwrite the incorrect image index, permanently preventing progression to the Design screen.
 - Fixed a silent download freeze (most prominent on multi-shot designs like 3-shot) that occurred when Android/iOS WebViews triggered strict CORS blocks on repeated Base64 data URIs. Removed `crossOrigin="anonymous"` and implemented `onerror` fallbacks to ensure Canvas rendering completes successfully.
+
+## [1.0.4-mobile] - 2026-08-03
+
+### Added
+- PWA web app manifest (`manifest.json`) and iOS homescreen support (`apple-touch-icon.png`, `icon-192.png`, `icon-512.png`) with centered logo on custom berry magenta background (`#9b0e56`).
+- Open Graph social share banner (`og-image.png`).
+
+### Changed
+- Streamlined mobile touch handling by isolating the new hardware-accelerated wand cursor to desktop pointer devices only (`@media (hover: hover) and (pointer: fine)`).

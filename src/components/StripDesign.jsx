@@ -548,10 +548,11 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     }
     const width = mapping.frameWidth;
     const height = mapping.frameHeight;
+    
     // Parse all GIFs and extract frames using gifuct-js
-    const gifFramesArr = await Promise.all(
+    const parsedGifs = await Promise.all(
       captured.map(async (cap) => {
-        if (!cap.gif) return [];
+        if (!cap.gif) return null;
         try {
           let binary;
           // Bypass fetch() for data URIs as some Android WebViews fail to load large data strings
@@ -568,16 +569,28 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
             binary = await fetch(cap.gif).then(r => r.arrayBuffer());
           }
           const gif = parseGIF(binary);
-          return decompressFrames(gif, true);
+          const frames = decompressFrames(gif, true);
+          return {
+            width: (gif.lsd && gif.lsd.width) || (frames[0] && frames[0].dims.width) || 240,
+            height: (gif.lsd && gif.lsd.height) || (frames[0] && frames[0].dims.height) || 320,
+            frames
+          };
         } catch (err) {
           console.error("Error parsing GIF:", err);
-          return [];
+          return null;
         }
       })
     );
-    // Find the minimum number of frames across all GIFs
-    const minFrames = Math.min(...gifFramesArr.map((arr) => arr.length));
 
+    const validGifs = parsedGifs.filter(Boolean);
+    if (validGifs.length === 0) {
+      alert("Oops! The animations aren't ready or are corrupted. Please try taking the photos again.");
+      setIsDownloading(false);
+      return;
+    }
+
+    // Find the minimum number of frames across all valid GIFs
+    const minFrames = Math.min(...validGifs.map((g) => g.frames.length));
     if (minFrames === 0 || minFrames === Infinity) {
       alert("Oops! The animations aren't ready or are corrupted. Please try taking the photos again.");
       setIsDownloading(false);
@@ -587,6 +600,29 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
     // Dynamically import gifenc
     const { GIFEncoder, quantize, applyPalette } = await import('gifenc');
     const gif = GIFEncoder();
+
+    // Create a persistent full-size compositing canvas and patch canvas for each photo slot
+    const slotCompositors = parsedGifs.map((gifObj) => {
+      if (!gifObj) return null;
+      const canvas = document.createElement("canvas");
+      canvas.width = gifObj.width;
+      canvas.height = gifObj.height;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      
+      const patchCanvas = document.createElement("canvas");
+      const patchCtx = patchCanvas.getContext("2d", { willReadFrequently: true });
+      
+      return {
+        canvas,
+        ctx,
+        patchCanvas,
+        patchCtx,
+        width: gifObj.width,
+        height: gifObj.height,
+        frames: gifObj.frames,
+        prevFrame: null
+      };
+    });
 
     // For each frame index, composite the GIFs into the strip
     for (let frameIdx = 0; frameIdx < minFrames; frameIdx++) {
@@ -604,54 +640,59 @@ export default function StripDesign({ images, designs, onBack, captured = [], sh
       // Draw each GIF frame in its mapped window using drawImageCover
       for (let i = 0; i < mapping.windows.length; i++) {
         const win = mapping.windows[i];
-        const gifFrame = gifFramesArr[i][frameIdx];
+        const comp = slotCompositors[i];
+        if (!comp) continue;
+        const gifFrame = comp.frames[frameIdx];
         if (!gifFrame) continue;
-        // Create an image from the frame's patch
-        const imageData = ctx.createImageData(gifFrame.dims.width, gifFrame.dims.height);
-        imageData.data.set(gifFrame.patch);
-        // Draw the frame patch to an offscreen canvas
-        const offCanvas = document.createElement('canvas');
-        offCanvas.width = gifFrame.dims.width;
-        offCanvas.height = gifFrame.dims.height;
-        const offCtx = offCanvas.getContext('2d');
-        offCtx.putImageData(imageData, 0, 0);
-        const img = new window.Image();
-        img.src = offCanvas.toDataURL();
-        // eslint-disable-next-line no-await-in-loop
-        await new Promise((resolve) => {
-          img.onload = () => {
-            ctx.save();
-            if (win.borderRadius) {
-              ctx.beginPath();
-              ctx.moveTo(win.left + win.borderRadius, win.top);
-              ctx.lineTo(win.left + win.width - win.borderRadius, win.top);
-              ctx.quadraticCurveTo(win.left + win.width, win.top, win.left + win.width, win.top + win.borderRadius);
-              ctx.lineTo(win.left + win.width, win.top + win.height - win.borderRadius);
-              ctx.quadraticCurveTo(win.left + win.width, win.top + win.height, win.left + win.width - win.borderRadius, win.top + win.height);
-              ctx.lineTo(win.left + win.borderRadius, win.top + win.height);
-              ctx.quadraticCurveTo(win.left, win.top + win.height, win.left, win.top + win.height - win.borderRadius);
-              ctx.lineTo(win.left, win.top + win.borderRadius);
-              ctx.quadraticCurveTo(win.left, win.top, win.left + win.borderRadius, win.top);
-              ctx.closePath();
-              ctx.clip();
-            } else {
-              ctx.beginPath();
-              ctx.rect(win.left, win.top, win.width, win.height);
-              ctx.closePath();
-              ctx.clip();
-            }
-            ctx.filter = cssFilters[i] || "none";
-            drawImageCover(ctx, img, win.left, win.top, win.width, win.height);
-            ctx.restore();
-            ctx.filter = "none";
-            resolve();
-          };
-          img.onerror = () => {
-            console.error("Failed to load gif frame photo", i);
-            resolve();
-          };
-        });
+
+        // Handle disposal method from previous frame
+        if (comp.prevFrame && comp.prevFrame.disposalType === 2) {
+          comp.ctx.clearRect(
+            comp.prevFrame.dims.left,
+            comp.prevFrame.dims.top,
+            comp.prevFrame.dims.width,
+            comp.prevFrame.dims.height
+          );
+        }
+
+        // Render the frame patch into the temporary patch canvas
+        comp.patchCanvas.width = gifFrame.dims.width;
+        comp.patchCanvas.height = gifFrame.dims.height;
+        const patchData = comp.patchCtx.createImageData(gifFrame.dims.width, gifFrame.dims.height);
+        patchData.data.set(gifFrame.patch);
+        comp.patchCtx.putImageData(patchData, 0, 0);
+
+        // Composite the patch onto the full-size slot canvas at its true (left, top) offset
+        comp.ctx.drawImage(comp.patchCanvas, gifFrame.dims.left, gifFrame.dims.top);
+        comp.prevFrame = gifFrame;
+
+        // Now comp.canvas has the FULL correctly composited photo for this frame!
+        ctx.save();
+        if (win.borderRadius) {
+          ctx.beginPath();
+          ctx.moveTo(win.left + win.borderRadius, win.top);
+          ctx.lineTo(win.left + win.width - win.borderRadius, win.top);
+          ctx.quadraticCurveTo(win.left + win.width, win.top, win.left + win.width, win.top + win.borderRadius);
+          ctx.lineTo(win.left + win.width, win.top + win.height - win.borderRadius);
+          ctx.quadraticCurveTo(win.left + win.width, win.top + win.height, win.left + win.width - win.borderRadius, win.top + win.height);
+          ctx.lineTo(win.left + win.borderRadius, win.top + win.height);
+          ctx.quadraticCurveTo(win.left, win.top + win.height, win.left, win.top + win.height - win.borderRadius);
+          ctx.lineTo(win.left, win.top + win.borderRadius);
+          ctx.quadraticCurveTo(win.left, win.top, win.left + win.borderRadius, win.top);
+          ctx.closePath();
+          ctx.clip();
+        } else {
+          ctx.beginPath();
+          ctx.rect(win.left, win.top, win.width, win.height);
+          ctx.closePath();
+          ctx.clip();
+        }
+        ctx.filter = cssFilters[i] || "none";
+        drawImageCover(ctx, comp.canvas, win.left, win.top, win.width, win.height);
+        ctx.restore();
+        ctx.filter = "none";
       }
+
       // Draw overlay (always after all GIF frames)
       if (overlayImg && overlayImg.complete) {
         ctx.drawImage(overlayImg, 0, 0, width, height);

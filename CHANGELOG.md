@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Homescreen and PWA icons (`apple-touch-icon.png`, `icon-192.png`, `icon-512.png`) and Open Graph social sharing card (`og-image.png`) with centered logo on deep berry magenta (`#9b0e56`) background.
+- Web App Manifest (`manifest.json`) and theme meta tags with standalone display settings and `#9b0e56` theme color.
+- Dedicated hardware-accelerated `WandCursor.jsx` component and vector asset `wand-cursor.svg` with glowing star tip and sparkle accents.
+- Fairy dust trailing sparkle engine rendered via hardware-accelerated Canvas with 4-pointed stars (`✦`, `✧`) in white, fairy pink, and starlight gold, plus click bursts.
+- Specular crystal glass styling classes (`.crystal-glass` and `.pink-crystal-btn`) with top-edge glints, inner reflections, and multi-layered backdrop blur.
 - Support for transparent GIF downloads natively using `gifenc` with alpha channel quantization.
 - `gif-transparent` option in the download dropdown menu in `StripDesign.jsx`.
 - Added `3shot-design6` template and corresponding configuration to `frameMappings.js` for the 3-shot layout.
@@ -18,6 +23,11 @@ All notable changes to this project will be documented in this file.
 - Background images (`customize_bg.png` / `strip_design_wide.png`) to the letter writing view in Strip Design.
 
 ### Changed
+- Replaced the primary "Start Photobooth" landing button with a slimmer (`max-w-[290px]`), frosted pink crystal glass pill (`.pink-crystal-btn`) featuring a glowing camera shutter ring and corner sparkles.
+- Redesigned the top-right Share button into a luminous `.crystal-glass` pill with high-contrast text and icon drop-shadows.
+- Harmonized widescreen desktop landing typography with the mobile version while preserving the floating side photo strips.
+- Narrowed the landing page hero sub-description to `max-w-[300px]` with balanced line wrapping.
+- Hidden system default cursor on desktop pointer devices (`cursor: none !important;`) so only the magical wand cursor is visible.
 - Replaced `gifshot` with dynamically imported `gifenc` in `StripDesign.jsx` for faster generation and proper transparent background support.
 - Updated the standard GIF download to use high-quality `rgb565` quantization and a solid white background.
 - Improved mobile responsiveness across `StripLayoutSelection`, `CameraSetup`, `FrameLayout`, and `ControlsCard` by scaling down elements to reduce vertical scrolling.
@@ -29,7 +39,7 @@ All notable changes to this project will be documented in this file.
 - Replaced the floating help circle SVG with a sleek camera outline icon.
 - Removed the inner glassmorphism container from the camera preview area to clean up the UI.
 - Detached the `FilterCarousel` "Apply To" panel from the button row to prevent horizontal scrolling clipping, and redesigned it as a compact vertical list.
-- Disabled the custom "Shooting Star" floating cursor on mobile devices.
+- Disabled the custom wand cursor and mouse listeners on touch and mobile devices.
 
 ### Fixed
 - Fixed a race condition in `CameraSetup.jsx` where taking multi-shots rapidly caused asynchronous GIF processing to overwrite the wrong image index, permanently freezing the "Choose Strip Design" button.
@@ -40,6 +50,8 @@ All notable changes to this project will be documented in this file.
 - Standardized download buttons in the `StripDesign` letter overlay to use the primary pink gradient theme.
 
 ### Performance
+- Eliminated 100+ React component re-renders per second by decoupling mousemove cursor updates from React component state into direct GPU-accelerated DOM transforms.
+- Built-in idle auto-sleep on the particle canvas loop to ensure 0% idle CPU and GPU usage when the cursor stops moving.
 - Migrated heavy `.png` assets in the `/images/` directory to `.webp` format to drastically reduce loading times.
 - Added `<link rel="preload">` tags in `index.html` for main background assets to prevent layout flash.
 - Implemented `loading="lazy"` on paginated `DesignGrid` image thumbnails to speed up initial Strip Design loading.
