@@ -116,7 +116,7 @@ function wrapLines(ctx, text, maxW) {
 }
 
 /* ── FRONT ─────────────────────────────────────────────────────────── */
-export function drawFront(ctx, { stripImg, theme, place, date }) {
+export function drawFront(ctx, { stripImg, theme, place, date, headline = "with love from" }) {
   const W = POSTCARD_W, H = POSTCARD_H, t = theme;
   ctx.clearRect(0, 0, W, H);
 
@@ -159,8 +159,14 @@ export function drawFront(ctx, { stripImg, theme, place, date }) {
   const ink = t.light ? "#fff4f6" : t.ink;
   ctx.textAlign = "center";
   ctx.fillStyle = ink;
-  ctx.font = `64px ${FONT.script}`;
-  ctx.save(); ctx.translate(textX, H * 0.36); ctx.rotate(-0.06); ctx.fillText("greetings from", 0, 0); ctx.restore();
+  const line = (headline || "").trim();
+  const shift = line ? 0 : -H * 0.06; // no little line → centre the big word
+  if (line) {
+    let hs = 64;
+    ctx.font = `${hs}px ${FONT.script}`;
+    while (ctx.measureText(line).width > W * 0.38 && hs > 30) { hs -= 4; ctx.font = `${hs}px ${FONT.script}`; }
+    ctx.save(); ctx.translate(textX, H * 0.36); ctx.rotate(-0.06); ctx.fillText(line, 0, 0); ctx.restore();
+  }
 
   // big place word with retro offset shadow, auto-fit
   const word = (place || "us").trim() || "us";
@@ -168,7 +174,7 @@ export function drawFront(ctx, { stripImg, theme, place, date }) {
   ctx.font = `${size}px ${FONT.script}`;
   while (ctx.measureText(word).width > W * 0.4 && size > 60) { size -= 6; ctx.font = `${size}px ${FONT.script}`; }
   ctx.save();
-  ctx.translate(textX, H * 0.6);
+  ctx.translate(textX, H * 0.6 + shift);
   ctx.rotate(-0.06);
   ctx.lineJoin = "round";
   ctx.fillStyle = t.light ? "#5a0a20" : t.accent; ctx.globalAlpha = 0.35;
@@ -180,7 +186,7 @@ export function drawFront(ctx, { stripImg, theme, place, date }) {
 
   ctx.font = `30px ${FONT.type}`;
   ctx.fillStyle = ink; ctx.globalAlpha = 0.7;
-  ctx.save(); ctx.translate(textX, H * 0.73); ctx.rotate(-0.06); ctx.fillText(`✦  ${date}  ✦`, 0, 0); ctx.restore();
+  ctx.save(); ctx.translate(textX, H * 0.73 + shift); ctx.rotate(-0.06); ctx.fillText(`✦  ${date}  ✦`, 0, 0); ctx.restore();
   ctx.globalAlpha = 1;
 
   // scattered sparkles + hearts

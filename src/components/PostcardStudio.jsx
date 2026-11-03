@@ -36,6 +36,7 @@ export default function PostcardStudio({ renderStrip, photo, photoFilter, onSave
   const [side, setSide] = useState("front");
   const [themeId, setThemeId] = useState("blush");
   const [place, setPlace] = useState("");
+  const [headline, setHeadline] = useState("with love from");
   const [message, setMessage] = useState("");
   const [to, setTo] = useState("");
   const [from, setFrom] = useState("");
@@ -60,11 +61,11 @@ export default function PostcardStudio({ renderStrip, photo, photoFilter, onSave
   useEffect(() => {
     if (!assets) return;
     const id = requestAnimationFrame(() => {
-      if (frontRef.current) drawFront(frontRef.current.getContext("2d"), { stripImg: assets.strip, theme, place, date });
+      if (frontRef.current) drawFront(frontRef.current.getContext("2d"), { stripImg: assets.strip, theme, place, date, headline });
       if (backRef.current) drawBack(backRef.current.getContext("2d"), { photoImg: assets.photo, theme, message, to, from, date });
     });
     return () => cancelAnimationFrame(id);
-  }, [assets, theme, place, message, to, from, date]);
+  }, [assets, theme, place, headline, message, to, from, date]);
 
   const save = async (which) => {
     const stamp = Date.now();
@@ -136,7 +137,28 @@ export default function PostcardStudio({ renderStrip, photo, photoFilter, onSave
               </div>
             </Field>
 
-            <Field label="greetings from" hint="front">
+            <Field label="little line" hint="front">
+              <input
+                value={headline}
+                maxLength={22}
+                onChange={(e) => { setHeadline(e.target.value); setSide("front"); }}
+                placeholder="none"
+                className="postcard-input font-pacifico"
+              />
+              <div className="studio-scroll mt-2 flex gap-1.5 overflow-x-auto pb-1">
+                {["with love from", "greetings from", "missing you,", "xoxo", "hello from", ""].map((h) => (
+                  <button
+                    key={h || "none"}
+                    onClick={() => { setHeadline(h); setSide("front"); }}
+                    className={`studio-chip !px-2.5 !py-1 !text-[11px] ${headline === h ? "is-on" : ""}`}
+                  >
+                    {h || "none"}
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            <Field label="big word" hint="front">
               <input
                 value={place}
                 maxLength={18}
