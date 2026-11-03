@@ -82,34 +82,55 @@ export default function CameraSetup({ layout, onBack, onDone }) {
   const isLandscape = useLandscape();
   const isMobile = useIsMobile();
 
-  // Size the viewfinder so the whole booth (top bar, charms, controls) fits on screen
+  // Size the viewfinder from what's actually on screen: everything else (top bar, booth
+  // frame, charms, prints + controls) is measured, and the camera gets the rest.
+  const headerRef = useRef(null);
+  const footerRef = useRef(null);
+  const boothRef = useRef(null);
+  const charmsRef = useRef(null);
   useEffect(() => {
     const update = () => {
       const portrait = isMobile && !isLandscape;
       const aspect = portrait ? 3 / 4 : 4 / 3;
-      const reserved = portrait ? 330 : 350;
-      const maxH = Math.max(200, window.innerHeight - reserved);
-      const width = Math.round(Math.min(window.innerWidth - 56, maxH * aspect, portrait ? 520 : 800));
-      setCameraSize({ width, height: Math.round(width / aspect) });
+      const win = camBoxRef.current, booth = boothRef.current;
+      const chromeH = booth && win ? booth.offsetHeight - win.offsetHeight : 70;
+      const chromeW = booth && win ? booth.offsetWidth - win.offsetWidth : 36;
+      const headerH = headerRef.current?.offsetHeight || 44;
+      const footerH = footerRef.current?.offsetHeight || 170;
+      const charms = charmsRef.current;
+      const charmsH = portrait && charms ? charms.offsetHeight + 10 : 0;
+      const charmsW = !portrait && charms ? charms.offsetWidth + 16 : 0;
+      const pads = 12 + 16 + 20 + 12; // page padding + main padding + footer gap
+      const maxH = window.innerHeight - headerH - footerH - chromeH - charmsH - pads;
+      const maxW = window.innerWidth - 24 - chromeW - charmsW;
+      const width = Math.round(Math.max(200, Math.min(maxW, maxH * aspect, portrait ? 560 : 1000)));
+      setCameraSize((prev) => {
+        const next = { width, height: Math.round(width / aspect) };
+        return prev.width === next.width && prev.height === next.height ? prev : next;
+      });
     };
     update();
+    const ro = new ResizeObserver(update);
+    [headerRef, footerRef].forEach((r) => r.current && ro.observe(r.current));
     window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, [isMobile, isLandscape]);
+    return () => { ro.disconnect(); window.removeEventListener("resize", update); };
+  }, [isMobile, isLandscape, step]);
 
   // Face tracking + sticker preview loop (only runs while a sticker is picked)
   useEffect(() => {
     const overlay = overlayRef.current;
     const clear = () => { if (overlay) overlay.getContext("2d").clearRect(0, 0, overlay.width, overlay.height); };
     if (sticker === "none") { clear(); facesRef.current = []; return; }
-    let alive = true, raf = 0, landmarker = null, lastVideoTime = -1;
+    let alive = true, raf = 0, landmarker = null, lastVideoTime = -1, lastDetect = 0;
     setStickerStatus((st) => (st === "ready" ? st : "loading"));
     const tick = () => {
       if (!alive) return;
       const video = camBoxRef.current?.querySelector("video");
       if (landmarker && video && video.readyState >= 2 && video.videoWidth) {
         const now = performance.now();
-        if (video.currentTime !== lastVideoTime) {
+        const gap = compositeRef.current ? 66 : 33; // ~15 fps while a GIF records, ~30 otherwise
+        if (video.currentTime !== lastVideoTime && now - lastDetect >= gap) {
+          lastDetect = now;
           lastVideoTime = video.currentTime;
           try { facesRef.current = landmarker.detectForVideo(video, now).faceLandmarks || []; } catch { /* skip frame */ }
         }
@@ -202,8 +223,8 @@ export default function CameraSetup({ layout, onBack, onDone }) {
                 video: [url],
                 gifWidth: gWidth,
                 gifHeight: gHeight,
-                numFrames: 10,
-                frameDuration: 0.2,
+                numFrames: 16,
+                frameDuration: 0.12,
               }, function(obj) {
                 if (obj && obj.image) {
                   setCaptured((prev) => {
@@ -287,7 +308,11 @@ export default function CameraSetup({ layout, onBack, onDone }) {
 
   // the shots so far — they play as GIFs once those are ready
   const prints = (
-    <div className={`booth-prints ${step === "done" ? "is-big" : ""}`} aria-label={`${captured.length} of ${shots} photos taken`}>
+    <div
+      className={`booth-prints ${step === "done" ? "is-big" : shots > 4 ? "is-many" : ""}`}
+      style={step === "done" ? undefined : { gridTemplateColumns: `repeat(${shots > 4 ? Math.ceil(shots / 2) : shots}, auto)` }}
+      aria-label={`${captured.length} of ${shots} photos taken`}
+    >
       {Array.from({ length: shots }).map((_, i) =>
         captured[i] ? (
           <span key={i} className="booth-print" style={{ transform: `rotate(${(i % 2 ? 1 : -1) * (2 + (i % 3))}deg)` }}>
@@ -301,12 +326,19 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     </div>
   );
 
-  const charmPicker = step !== "done" && step !== "countdown" && (
-    <div className={`booth-charms ${portrait ? "is-row" : "is-col"}`} role="listbox" aria-label="Face charms">
+  const charmPicker = step !== "done" && (
+    <div
+      ref={charmsRef}
+      className={`booth-charms ${portrait ? "is-row" : "is-col"}`}
+      style={portrait ? { width: cameraSize.width + 20 } : { maxHeight: cameraSize.height + 40 }}
+      role="listbox"
+      aria-label="Face charms"
+    >
       {STICKERS.map((st) => (
         <button
           key={st.id}
           onClick={() => setSticker(st.id)}
+          disabled={step === "countdown"}
           className={`facecharm ${sticker === st.id ? "is-on" : ""}`}
           aria-label={`${st.name} face charm`}
           aria-selected={sticker === st.id}
@@ -346,7 +378,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
       )}
 
       {/* top bar */}
-      <header className="relative z-10 grid w-full max-w-4xl grid-cols-[auto_1fr_auto] items-center gap-3">
+      <header ref={headerRef} className="relative z-10 grid w-full max-w-4xl grid-cols-[auto_1fr_auto] items-center gap-3">
         <button onClick={onBack} className="studio-iconbtn" aria-label="Go back">
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
@@ -354,9 +386,9 @@ export default function CameraSetup({ layout, onBack, onDone }) {
         <button onClick={() => setShowInstructions(true)} className="studio-iconbtn text-base font-bold" aria-label="How it works">?</button>
       </header>
 
-      <main className="relative z-10 flex w-full flex-1 flex-col items-center justify-center py-3">
+      <main className={`relative z-10 flex w-full flex-1 items-center justify-center py-2.5 ${portrait ? "flex-col gap-2.5" : "flex-row gap-4"}`}>
         {/* the booth */}
-        <div className="booth">
+        <div ref={boothRef} className="booth">
           <div className="booth-top">
             <span className="booth-lens" aria-hidden />
             <span className="booth-label">PHOTO·BOOTH</span>
@@ -407,7 +439,6 @@ export default function CameraSetup({ layout, onBack, onDone }) {
               {step !== "done" && numberOfCameras > 1 && (
                 <button
                   className="absolute left-3 bottom-3 z-20 rounded-md bg-black/30 p-2 text-white backdrop-blur-md transition hover:bg-black/45"
-                  style={portrait ? { bottom: 68 } : undefined}
                   onClick={() => { if (cameraRef.current) setFacingMode(cameraRef.current.switchCamera()); }}
                   title="Flip camera"
                   aria-label="Flip camera"
@@ -416,7 +447,6 @@ export default function CameraSetup({ layout, onBack, onDone }) {
                 </button>
               )}
 
-              {charmPicker}
 
               {/* countdown — 8-bit style */}
               {step === "countdown" && countdown !== null && countdown > 0 && (
@@ -439,11 +469,12 @@ export default function CameraSetup({ layout, onBack, onDone }) {
             <span className="booth-grille" />
           </div>
         </div>
+        {charmPicker}
       </main>
 
       {/* shots + controls */}
-      <footer className="relative z-10 flex w-full max-w-xl flex-col items-center gap-3">
-        {prints}
+      <footer ref={footerRef} className="relative z-10 flex w-full max-w-3xl flex-col items-center gap-3">
+        {step === "done" && prints}
         {step === "done" ? (
           <div className="flex w-full items-center justify-center gap-3">
             <button className="booth-pill" onClick={handleStartOrRetake}>
@@ -468,18 +499,16 @@ export default function CameraSetup({ layout, onBack, onDone }) {
                   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9v6h4l5 4V5L8 9z" /><path d="M17 9l5 6M22 9l-5 6" /></svg>
                 )}
               </button>
+              {captured.length > 0 && (
+                <button className="booth-pill !px-3" onClick={handleStartOrRetake} disabled={step === "countdown"} aria-label="Redo all shots" title="redo">
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4.5h4.5" /></svg>
+                </button>
+              )}
             </div>
             <button className="booth-shutter" onClick={handleStartCountdown} disabled={!canShoot} aria-label="Take photo">
               <span />
             </button>
-            <div className="justify-self-end">
-              {captured.length > 0 && (
-                <button className="booth-pill" onClick={handleStartOrRetake} disabled={step === "countdown"}>
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4.5h4.5" /></svg>
-                  redo
-                </button>
-              )}
-            </div>
+            <div className="justify-self-end">{prints}</div>
           </div>
         )}
       </footer>
