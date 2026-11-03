@@ -17,6 +17,7 @@
     "@capacitor/share": "^6.0.4",
     "@fontsource/homemade-apple": "^5.3.0",
     "@fontsource/pacifico": "^5.3.0",
+    "@fontsource/press-start-2p": "^5.3.0",
     "@fontsource/special-elite": "^5.3.0",
     "@mediapipe/tasks-vision": "^0.10.21",
     "@p5-wrapper/react": "^4.4.2",

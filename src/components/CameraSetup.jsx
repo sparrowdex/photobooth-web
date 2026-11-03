@@ -1,8 +1,8 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Camera } from "react-camera-pro";
-import BackButton from "./BackButton";
-import { useTheme } from "./ThemeContext";
 import { STICKERS, loadFaceLandmarker, coverCrop, drawFaces, stickerThumbs } from "./faceStickers";
+import { countBeep, shutterSound, unlockSound } from "./boothSounds";
+import "@fontsource/press-start-2p/400.css";
 
 // Orientation detection using Screen Orientation API (with fallback)
 function useLandscape() {
@@ -47,7 +47,6 @@ function useIsMobile() {
 }
 
 export default function CameraSetup({ layout, onBack, onDone }) {
-  const { colors } = useTheme();
   const shots = layout?.shots || 1;
   const cameraRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -66,6 +65,16 @@ export default function CameraSetup({ layout, onBack, onDone }) {
   const stickerRef = useRef("none");
   const compositeRef = useRef(null);   // { canvas, ctx } while recording a GIF with stickers
   const [sticker, setSticker] = useState("none");
+  const [timerSec, setTimerSec] = useState(3);
+  const [flash, setFlash] = useState(false);
+  const [soundOn, setSoundOn] = useState(() => { try { return localStorage.getItem("photobooth.sound") !== "off"; } catch { return true; } });
+  const soundRef = useRef(soundOn);
+  soundRef.current = soundOn;
+  const toggleSound = () => setSoundOn((on) => {
+    try { localStorage.setItem("photobooth.sound", on ? "off" : "on"); } catch { /* ignore */ }
+    if (!on) unlockSound();
+    return !on;
+  });
   const [stickerStatus, setStickerStatus] = useState("idle"); // idle | loading | ready | error
   const thumbs = stickerThumbs();
   stickerRef.current = sticker;
@@ -73,18 +82,20 @@ export default function CameraSetup({ layout, onBack, onDone }) {
   const isLandscape = useLandscape();
   const isMobile = useIsMobile();
 
-  // Set camera size on mount and resize
+  // Size the viewfinder so the whole booth (top bar, charms, controls) fits on screen
   useEffect(() => {
-    const updateCameraSize = () => {
-      const width = Math.min(window.innerWidth * 0.95, 640);
-      const height = Math.round(width * 0.75); // 4:3 aspect ratio
-      setCameraSize({ width, height });
+    const update = () => {
+      const portrait = isMobile && !isLandscape;
+      const aspect = portrait ? 3 / 4 : 4 / 3;
+      const reserved = portrait ? 330 : 350;
+      const maxH = Math.max(200, window.innerHeight - reserved);
+      const width = Math.round(Math.min(window.innerWidth - 56, maxH * aspect, portrait ? 520 : 800));
+      setCameraSize({ width, height: Math.round(width / aspect) });
     };
-    
-    updateCameraSize();
-    window.addEventListener('resize', updateCameraSize);
-    return () => window.removeEventListener('resize', updateCameraSize);
-  }, []);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [isMobile, isLandscape]);
 
   // Face tracking + sticker preview loop (only runs while a sticker is picked)
   useEffect(() => {
@@ -149,6 +160,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
   // Countdown logic
   useEffect(() => {
     if (countdown === null) return;
+    if (countdown > 0 && soundRef.current) countBeep(countdown);
     if (countdown === 3) {
       // Capture the correct index for this specific shot to avoid race conditions
       // where the user takes the next shot before the current GIF is done generating.
@@ -216,6 +228,10 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     if (countdown === 0) {
       setTimeout(async () => {
         if (cameraRef.current) {
+          setFlash(true);
+          if (soundRef.current) shutterSound();
+          setTimeout(() => setFlash(false), 450);
+          navigator.vibrate?.(30);
           let photo = cameraRef.current.takePhoto();
           try { photo = await addStickersToPhoto(photo); } catch { /* keep the plain photo */ }
           setCaptured((prev) => [...prev, { photo, gif: null }]);
@@ -251,127 +267,108 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     setCountdown(null);
   };
 
-  // Handler to start session
-  const handleStartSession = () => {
-    setStep("preview");
-  };
-
-  // Handler to start countdown for each shot
+  // Shutter: start the timer for the next shot
   const handleStartCountdown = () => {
-    setCountdown(3);
+    if (soundRef.current) unlockSound();
+    setCountdown(timerSec);
     setStep("countdown");
   };
+  const cycleTimer = () => setTimerSec((t) => (t === 3 ? 5 : t === 5 ? 10 : 3));
 
-  // Camera container style
-  let cameraContainerStyle = {
-    width: cameraSize.width,
-    height: cameraSize.height,
-    position: "relative",
-    background: "transparent",
-    borderRadius: "12px",
-    overflow: "hidden"
-  };
-  // On mobile portrait, let the camera fill the container width and use a tall 3:4 aspect ratio
-  if (isMobile && !isLandscape) {
-    cameraContainerStyle = {
-      width: "100%",
-      maxWidth: "calc(48svh * 0.75)",
-      aspectRatio: "3 / 4",
-      position: "relative",
-      background: "transparent",
-      borderRadius: "12px",
-      overflow: "hidden",
-      margin: "0 auto",
-    };
-  }
+  const portrait = isMobile && !isLandscape;
+  const canShoot = (step === "start" || step === "preview") && captured.length < shots;
+  const gifsPending = captured.some((c) => !c.gif);
+  const title =
+    step === "done" ? "all done ✦" : step === "start" && captured.length === 0 ? "strike a pose" : `photo ${Math.min(captured.length + 1, shots)} of ${shots}`;
 
-  const backgroundImage = isMobile && !isLandscape
+  const backgroundImage = portrait
     ? "url('./images/customize_bg.webp')"
     : "url('./images/strip_design_wide.webp')";
 
-  return (
-    <div className="flex flex-col items-center relative w-full min-h-[100svh] bg-transparent overflow-x-hidden py-4 md:py-8 px-2 md:px-4">
-      {/* Background Image Overlay */}
-      <div
-        className="absolute inset-0 w-full h-full bg-center bg-cover bg-no-repeat z-0 pointer-events-none"
-        style={{ backgroundImage }}
-      ></div>
+  // the shots so far — they play as GIFs once those are ready
+  const prints = (
+    <div className={`booth-prints ${step === "done" ? "is-big" : ""}`} aria-label={`${captured.length} of ${shots} photos taken`}>
+      {Array.from({ length: shots }).map((_, i) =>
+        captured[i] ? (
+          <span key={i} className="booth-print" style={{ transform: `rotate(${(i % 2 ? 1 : -1) * (2 + (i % 3))}deg)` }}>
+            <img src={captured[i].gif || captured[i].photo} data-photo={captured[i].photo} alt={`Shot ${i + 1}`} />
+            <span className="booth-print-tag">{captured[i].gif ? "gif" : "…"}</span>
+          </span>
+        ) : (
+          <span key={i} className="booth-print is-empty">{i + 1}</span>
+        )
+      )}
+    </div>
+  );
 
-      {/* Orientation Prompt */}
-      {/* Removed: Landscape mode disclaimer */}
-
-      {/* Floating Help Circle */}
-      {!showInstructions && (
-        <div
-          className="fixed bottom-8 right-8 z-50 cursor-pointer transition-transform hover:scale-110"
-          onClick={() => setShowInstructions(true)}
-          style={{
-            width: 60,
-            height: 60,
-            background: 'radial-gradient(circle at 30% 30%, #f472b6, #a21caf)',
-            borderRadius: '50%',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-          title="How to use the photobooth"
+  const charmPicker = step !== "done" && step !== "countdown" && (
+    <div className={`booth-charms ${portrait ? "is-row" : "is-col"}`} role="listbox" aria-label="Face charms">
+      {STICKERS.map((st) => (
+        <button
+          key={st.id}
+          onClick={() => setSticker(st.id)}
+          className={`facecharm ${sticker === st.id ? "is-on" : ""}`}
+          aria-label={`${st.name} face charm`}
+          aria-selected={sticker === st.id}
+          title={st.name}
         >
-          <svg width="28" height="28" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-            <circle cx="12" cy="13" r="4" />
-          </svg>
-        </div>
-      )}
+          {st.id === "none" ? <span className="text-base text-pink-400">⌀</span> : <img src={thumbs[st.id]} alt="" draggable={false} />}
+          {sticker === st.id && st.id !== "none" && stickerStatus === "loading" && <span className="facecharm-spin" />}
+        </button>
+      ))}
+    </div>
+  );
 
-      {/* Instruction Card */}
+  return (
+    <div className="relative flex min-h-[100svh] w-full flex-col items-center overflow-x-hidden px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div
+        className="pointer-events-none absolute inset-0 z-0 h-full w-full bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage }}
+      />
+
+      {/* How it works */}
       {showInstructions && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative animate-fade-in">
-            <button
-              className={`absolute top-4 right-4 text-gray-400 hover:text-pink-500 text-2xl`}
-              onClick={() => setShowInstructions(false)}
-              aria-label="Close"
-            >
-              &times;
-            </button>
-            <h2 className={`text-2xl font-bold mb-4 text-gray-800`}>How to Use the Photobooth</h2>
-            <ul className="list-disc pl-6 space-y-2 text-gray-700">
-              <li>Click <b>Start Photo Session</b> to begin.</li>
-              <li>Follow the countdown and pose for each shot.</li>
-              <li>Make sure you are centered when posing for pictures.</li>
-              <li>After all photos are taken, choose your strip design or retake if needed.</li>
-              <li>Use the <b>Retake</b> button to restart the session at any time.</li>
-              <li>For the best look, layer your favorite filters on top of the <b>Soft Focus</b> filter, especially if your device has a high-resolution camera.</li>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-label="How to use the photobooth">
+          <button className="studio-backdrop absolute inset-0" onClick={() => setShowInstructions(false)} aria-label="Close" />
+          <div className="studio-panel studio-sheet-in relative w-full max-w-md rounded-[28px] p-6">
+            <h2 className="mb-4 font-pacifico text-2xl text-pink-500">how it works ✦</h2>
+            <ul className="space-y-2.5 text-sm text-gray-600">
+              <li>📸 Tap the big shutter button — the timer counts down, then it snaps.</li>
+              <li>⏱ Tap the timer to switch between 3, 5 and 10 seconds.</li>
+              <li>🐰 Swipe the face charms in the viewfinder and pick one (needs internet the first time).</li>
+              <li>🧍 Stay centred in the frame for each shot.</li>
+              <li>↺ Retake any time, then choose your strip design.</li>
+              <li>✨ Tip: layer looks on top of <b>Soft Focus</b> for extra-smooth skin.</li>
             </ul>
+            <button className="studio-save mt-5 w-full" onClick={() => setShowInstructions(false)}>got it ♡</button>
           </div>
         </div>
       )}
 
-      <div className="w-full max-w-5xl flex flex-col items-center relative z-10">
-        <BackButton className="mb-2 md:mb-4 self-start md:absolute md:top-8 md:left-8 z-10" onClick={onBack}>
-          Go Back
-        </BackButton>
+      {/* top bar */}
+      <header className="relative z-10 grid w-full max-w-4xl grid-cols-[auto_1fr_auto] items-center gap-3">
+        <button onClick={onBack} className="studio-iconbtn" aria-label="Go back">
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+        </button>
+        <h1 className="text-center font-pacifico text-[26px] leading-tight text-pink-700 drop-shadow-[0_1px_0_rgba(255,255,255,0.7)] md:text-4xl">{title}</h1>
+        <button onClick={() => setShowInstructions(true)} className="studio-iconbtn text-base font-bold" aria-label="How it works">?</button>
+      </header>
 
-        <div className="relative w-full flex flex-col items-center mt-4 md:mt-8">
-          <div className={`mb-3 md:mb-6 text-xl md:text-4xl font-pacifico font-bold ${colors.text} drop-shadow-sm`}>
-            {step === "done"
-              ? "All Photos Captured!"
-              : step === "start"
-                ? "Ready to Start?"
-                : `Photo ${captured.length + 1} of ${shots}`}
+      <main className="relative z-10 flex w-full flex-1 flex-col items-center justify-center py-3">
+        {/* the booth */}
+        <div className="booth">
+          <div className="booth-top">
+            <span className="booth-lens" aria-hidden />
+            <span className="booth-label">PHOTO·BOOTH</span>
+            <span className="booth-leds" aria-hidden>
+              {Array.from({ length: shots }).map((_, i) => <span key={i} className={i < captured.length ? "is-on" : ""} />)}
+            </span>
           </div>
-
-          {/* Camera Container */}
-          <div className="mb-3 md:mb-6 flex justify-center w-full">
-            <div 
-              ref={camBoxRef}
-              style={cameraContainerStyle}
-              className="shadow-inner bg-black ring-4 ring-white ring-opacity-60 rounded-xl overflow-hidden relative"
-            >
+          <div className="booth-bezel">
+            <div ref={camBoxRef} className="booth-window" style={{ width: cameraSize.width, height: cameraSize.height }}>
               <Camera
                 ref={cameraRef}
-                aspectRatio={isMobile && !isLandscape ? 3 / 4 : 4 / 3}
+                aspectRatio={portrait ? 3 / 4 : 4 / 3}
                 facingMode={facingMode}
                 numberOfCamerasCallback={setNumberOfCameras}
                 errorMessages={{
@@ -381,149 +378,111 @@ export default function CameraSetup({ layout, onBack, onDone }) {
                   canvas: "Canvas is not supported."
                 }}
               />
-              
-              {/* Face sticker preview (mirrored like the video for the front camera) */}
+
+              {/* face sticker preview (mirrored like the video for the front camera) */}
               <canvas
                 ref={overlayRef}
                 className="pointer-events-none absolute inset-0 z-[5] h-full w-full"
                 style={{ transform: facingMode === "user" ? "rotateY(180deg)" : "none" }}
               />
 
-              {/* Viewfinder brackets */}
-              {step !== "start" && step !== "done" && (
-                 <div className="absolute inset-4 md:inset-8 pointer-events-none z-10 opacity-70">
-                 <div className="absolute top-0 left-0 w-8 md:w-16 h-8 md:h-16 border-t-4 border-l-4 border-white rounded-tl-xl"></div>
-                 <div className="absolute top-0 right-0 w-8 md:w-16 h-8 md:h-16 border-t-4 border-r-4 border-white rounded-tr-xl"></div>
-                 <div className="absolute bottom-0 left-0 w-8 md:w-16 h-8 md:h-16 border-b-4 border-l-4 border-white rounded-bl-xl"></div>
-                 <div className="absolute bottom-0 right-0 w-8 md:w-16 h-8 md:h-16 border-b-4 border-r-4 border-white rounded-br-xl"></div>
-                </div>
+              {/* viewfinder corners */}
+              <div className="pointer-events-none absolute inset-3 z-10 opacity-80 md:inset-4" aria-hidden>
+                <span className="booth-corner left-0 top-0 border-l-[3px] border-t-[3px]" />
+                <span className="booth-corner right-0 top-0 border-r-[3px] border-t-[3px]" />
+                <span className="booth-corner bottom-0 left-0 border-b-[3px] border-l-[3px]" />
+                <span className="booth-corner bottom-0 right-0 border-b-[3px] border-r-[3px]" />
+              </div>
+
+              {step !== "done" && step !== "countdown" && (
+                <span className="booth-live"><span className="booth-live-dot" /> live</span>
+              )}
+              {sticker !== "none" && stickerStatus !== "ready" && step !== "countdown" && (
+                <span className={`booth-status ${stickerStatus === "error" ? "is-error" : ""}`}>
+                  {stickerStatus === "error" ? "charms couldn't load (offline?)" : "waking up the magic…"}
+                </span>
               )}
 
-              {/* Countdown Overlay */}
-              {step === "countdown" && countdown !== null && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 z-20 backdrop-blur-sm">
-                  <span className="text-white text-8xl md:text-9xl font-bold drop-shadow-2xl animate-ping">{countdown}</span>
-                </div>
-              )}
-
-              {/* Flip Camera Button */}
+              {/* flip camera */}
               {step !== "done" && numberOfCameras > 1 && (
                 <button
-                  className="absolute top-4 right-4 md:top-6 md:right-6 z-50 p-2 sm:p-3 bg-black bg-opacity-30 backdrop-blur-md rounded-full text-white hover:bg-opacity-50 transition-all shadow-lg focus:outline-none"
-                  onClick={() => {
-                    if (cameraRef.current) {
-                      setFacingMode(cameraRef.current.switchCamera());
-                    }
-                  }}
-                  title="Flip Camera"
+                  className="absolute left-3 bottom-3 z-20 rounded-md bg-black/30 p-2 text-white backdrop-blur-md transition hover:bg-black/45"
+                  style={portrait ? { bottom: 68 } : undefined}
+                  onClick={() => { if (cameraRef.current) setFacingMode(cameraRef.current.switchCamera()); }}
+                  title="Flip camera"
+                  aria-label="Flip camera"
                 >
-                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                </button>
+              )}
+
+              {charmPicker}
+
+              {/* countdown — 8-bit style */}
+              {step === "countdown" && countdown !== null && countdown > 0 && (
+                <div className="booth-countdown">
+                  <span key={countdown} className="booth-count-num">{countdown}</span>
+                  <div className="booth-count-bar" aria-hidden>
+                    {Array.from({ length: timerSec }).map((_, i) => <span key={i} className={i < countdown ? "is-on" : ""} />)}
+                  </div>
+                  <span className="booth-count-label">GET READY!</span>
+                </div>
+              )}
+
+              {/* flash */}
+              {flash && <div className="booth-flash" aria-hidden />}
+            </div>
+          </div>
+          <div className="booth-bottom" aria-hidden>
+            <span className="booth-grille" />
+            <span className="booth-tagline">★ SMILE ★</span>
+            <span className="booth-grille" />
+          </div>
+        </div>
+      </main>
+
+      {/* shots + controls */}
+      <footer className="relative z-10 flex w-full max-w-xl flex-col items-center gap-3">
+        {prints}
+        {step === "done" ? (
+          <div className="flex w-full items-center justify-center gap-3">
+            <button className="booth-pill" onClick={handleStartOrRetake}>
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4.5h4.5" /></svg>
+              retake
+            </button>
+            <button className="studio-save !px-7" onClick={() => onDone(captured)} disabled={gifsPending}>
+              {gifsPending ? <span className="flex items-center gap-2"><span className="studio-spinner" /> developing gifs…</span> : "choose strip design →"}
+            </button>
+          </div>
+        ) : (
+          <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-4">
+            <div className="flex items-center gap-2 justify-self-start">
+              <button className="booth-pill" onClick={cycleTimer} disabled={step === "countdown"} aria-label={`Timer ${timerSec} seconds`}>
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2M9 2h6" /></svg>
+                {timerSec}s
+              </button>
+              <button className="booth-pill !px-3" onClick={toggleSound} aria-label={soundOn ? "Sound on" : "Sound off"} title={soundOn ? "sound on" : "sound off"}>
+                {soundOn ? (
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9v6h4l5 4V5L8 9z" /><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" /></svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9v6h4l5 4V5L8 9z" /><path d="M17 9l5 6M22 9l-5 6" /></svg>
+                )}
+              </button>
+            </div>
+            <button className="booth-shutter" onClick={handleStartCountdown} disabled={!canShoot} aria-label="Take photo">
+              <span />
+            </button>
+            <div className="justify-self-end">
+              {captured.length > 0 && (
+                <button className="booth-pill" onClick={handleStartOrRetake} disabled={step === "countdown"}>
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4.5h4.5" /></svg>
+                  redo
                 </button>
               )}
             </div>
           </div>
-
-          {/* Face sticker picker */}
-          {step !== "done" && (
-            <div className="mb-4 w-full max-w-xl md:mb-6">
-              <div className="mb-1.5 flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-pink-500/90">
-                <span>face charms</span>
-                {sticker !== "none" && stickerStatus === "loading" && <span className="normal-case tracking-normal text-pink-400">· waking up the magic…</span>}
-                {sticker !== "none" && stickerStatus === "error" && <span className="normal-case tracking-normal text-rose-500">· couldn't load (offline?)</span>}
-              </div>
-              <div className="studio-scroll flex justify-start gap-2.5 overflow-x-auto px-2 pb-1 sm:justify-center">
-                {STICKERS.map((st) => (
-                  <button
-                    key={st.id}
-                    onClick={() => setSticker(st.id)}
-                    disabled={step === "countdown"}
-                    className={`facecharm ${sticker === st.id ? "is-on" : ""}`}
-                    aria-label={`${st.name} face charm`}
-                    title={st.name}
-                  >
-                    {st.id === "none" ? (
-                      <span className="text-lg text-pink-400">⌀</span>
-                    ) : (
-                      <img src={thumbs[st.id]} alt="" draggable={false} />
-                    )}
-                    {sticker === st.id && st.id !== "none" && stickerStatus === "loading" && <span className="facecharm-spin" />}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Start Photo Session button */}
-          {step === "start" && (
-            <button
-              className={`px-6 py-3 md:px-10 md:py-4 ${colors.button} text-white rounded-full shadow-lg transition-transform hover:scale-105 text-lg md:text-xl font-semibold`}
-              onClick={handleStartSession}
-            >
-              Start Photo Session
-            </button>
-          )}
-
-          {/* Take Photo button for each shot */}
-          {step === "preview" && captured.length < shots && (
-            <button
-              className={`px-6 py-3 md:px-10 md:py-4 ${colors.button} text-white rounded-full shadow-lg transition-transform hover:scale-105 text-lg md:text-xl font-semibold`}
-              onClick={handleStartCountdown}
-            >
-              Take Photo
-            </button>
-          )}
-
-          {/* Slots UI */}
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-4 md:gap-6 mt-4 md:mt-8 w-full">
-            {Array.from({ length: shots }).map((_, i) =>
-              captured[i] ? (
-                <div key={i} className="flex flex-col items-center relative group">
-                  <img
-                    src={captured[i].photo}
-                    alt={`Shot ${i + 1}`}
-                    className="w-14 h-20 sm:w-20 sm:h-28 md:w-28 md:h-36 object-cover rounded-xl shadow-md border-2 border-white"
-                  />
-                  {captured[i].gif && (
-                    <img
-                      src={captured[i].gif}
-                      alt={`GIF ${i + 1}`}
-                      className="w-8 h-8 sm:w-10 sm:h-10 md:w-14 md:h-14 object-cover rounded-lg shadow-sm border-2 border-white absolute -bottom-2 -right-2 bg-white"
-                    />
-                  )}
-                </div>
-              ) : (
-                <div
-                  key={i}
-                  className={`w-14 h-20 sm:w-20 sm:h-28 md:w-28 md:h-36 rounded-xl border-4 border-dashed ${colors.borderLight} flex items-center justify-center ${colors.textSecondary} text-xl sm:text-2xl md:text-3xl font-bold opacity-70 bg-white bg-opacity-40 shadow-inner`}
-                >
-                  {i + 1}
-                </div>
-              )
-            )}
-          </div>
-
-          {/* Retake/Choose Strip Design after all photos */}
-          {step === "done" && (
-            <div className="flex flex-wrap justify-center gap-2 md:gap-4 mt-4 md:mt-8">
-              <button
-                className={`px-6 py-3 md:px-8 md:py-4 ${colors.buttonSecondary} rounded-full shadow transition-transform hover:scale-105 text-base md:text-lg font-semibold`}
-                onClick={handleStartOrRetake}
-              >
-                Retake
-              </button>
-              <button
-                className={`px-6 py-3 md:px-8 md:py-4 ${colors.button} text-white rounded-full shadow-lg transition-transform hover:scale-105 text-base md:text-lg font-semibold disabled:opacity-50 disabled:cursor-wait disabled:hover:scale-100`}
-                onClick={() => onDone(captured)}
-                disabled={captured.some(c => !c.gif)}
-              >
-                {captured.some(c => !c.gif) ? "Processing GIFs..." : "Choose Strip Design"}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+        )}
+      </footer>
     </div>
   );
 }
