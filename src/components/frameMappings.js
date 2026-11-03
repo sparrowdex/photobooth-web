@@ -55,6 +55,14 @@ const frameMappings = {
     windows: [
       { left: 38, top: 50, width: 250, height: 270, borderRadius: 0 }
     ],
+    // look of the fill-in form for this frame (matches the card's paper + ink)
+    formTheme: { title: "Girlfriend", paper: "#fbe3ec", edge: "#f3bfd2", ink: "#2b2f4a", stamp: "#d0487f" },
+    // fill-in blanks on the license card (frame units; y = middle of the writing line)
+    textFields: [
+      { id: "name", label: "Name", x: 312, y: 106, width: 188, fontSize: 15 },
+      { id: "dob", label: "Date of birth", x: 366, y: 141, width: 134, fontSize: 15 },
+      { id: "signature", label: "Signature", x: 268, y: 296, width: 240, fontSize: 15, font: "signature", align: "center", color: "#1d3b8a" },
+    ],
   },
   "1shot-design8": {
     frame: "/designs/1shot-design8.png",
@@ -76,9 +84,16 @@ const frameMappings = {
   "1shot-design10": {
     frame: "/designs/1shot-design10.png",
     frameWidth: 500,
-    frameHeight: 330,
+    frameHeight: 302, // matches the 736x445 PNG aspect ratio so the frame isn't stretched
     windows: [
-      { left: 240, top: 40, width: 220, height: 240, borderRadius: 0 }
+      // photo cutout is on the LEFT side of this license card (the right side is opaque text)
+      { left: 35, top: 50, width: 198, height: 214, borderRadius: 0 }
+    ],
+    formTheme: { title: "Boyfriend", paper: "#e2eef6", edge: "#b9d3e5", ink: "#24324f", stamp: "#d0487f" },
+    textFields: [
+      { id: "name", label: "Name", x: 284, y: 92, width: 172, fontSize: 14 },
+      { id: "dob", label: "Date of birth", x: 334, y: 124, width: 122, fontSize: 14 },
+      { id: "signature", label: "Signature", x: 244, y: 263, width: 222, fontSize: 14, font: "signature", align: "center", color: "#1d3b8a" },
     ],
   },
   "1shot-design11": {
@@ -351,6 +366,12 @@ const frameMappings = {
   //when you want to check if images are aligned properly set borderRadius:71
 };
 export default frameMappings;
+
+// Frames made in the frame studio are added here at runtime, so every part of the app that
+// looks up frameMappings[key] (preview, PNG/GIF saving, postcard) handles them like built-ins.
+export function registerFrame(key, mapping) {
+  frameMappings[key] = mapping;
+}
 //[fixed]current problem: Photo is mapped but after downloading some of them get stretched(updated download logic in stripdesign)
 //solution: add a feature where if the photo excedds the photo overlay, the exceeded part disappears
 //solution: choose photo frames with more feasible mapping to the original 640x480 camera view

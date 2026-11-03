@@ -3,7 +3,7 @@ import frameMappings from "./frameMappings";
 import FrameLayout from "./FrameLayout";
 import { useTheme } from "./ThemeContext";
 
-export default function PhotoLayoutCard({ images, filters, selectedDesign, transparentCard }) {
+export default function PhotoLayoutCard({ images, filters, selectedDesign, transparentCard, textValues, develop, onDeveloped }) {
   const { colors } = useTheme();
   const mappingKey = selectedDesign?.key;
   const mapping = mappingKey ? frameMappings[mappingKey] : null;
@@ -11,7 +11,7 @@ export default function PhotoLayoutCard({ images, filters, selectedDesign, trans
   if (mapping) {
     return (
       <div className={transparentCard ? "bg-transparent shadow-none p-2 sm:p-4 md:p-6 flex flex-col items-center" : `${colors.card} rounded-2xl shadow-2xl p-4 md:p-6 flex flex-col items-center`}>
-        <FrameLayout images={images} mapping={mapping} filters={filters} />
+        <FrameLayout images={images} mapping={mapping} filters={filters} textValues={textValues} develop={develop} onDeveloped={onDeveloped} />
       </div>
     );
   }
