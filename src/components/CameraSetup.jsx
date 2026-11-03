@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Camera } from "react-camera-pro";
 import BackButton from "./BackButton";
 import { useTheme } from "./ThemeContext";
@@ -157,7 +157,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       try {
         mediaRecorderRef.current.stop();
-      } catch (e) {
+      } catch {
         // ignore
       }
     }

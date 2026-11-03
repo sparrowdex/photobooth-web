@@ -184,13 +184,13 @@ export default function WandCursor() {
       {/* Trailing Fairy Dust Sparkle Canvas */}
       <canvas
         ref={canvasRef}
-        className="hidden md:block pointer-events-none fixed inset-0 z-[49]"
+        className="hidden md:block pointer-events-none fixed inset-0 z-[9998]"
       />
 
       {/* Wand Pointer */}
       <div
         ref={cursorRef}
-        className="hidden md:block pointer-events-none fixed top-0 left-0 z-50 transition-opacity duration-150"
+        className="hidden md:block pointer-events-none fixed top-0 left-0 z-[9999] transition-opacity duration-150"
         style={{
           opacity: 0,
           willChange: "transform",
