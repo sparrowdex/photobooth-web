@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { Camera } from "react-camera-pro";
 import BackButton from "./BackButton";
 import { useTheme } from "./ThemeContext";
+import { STICKERS, loadFaceLandmarker, coverCrop, drawFaces, stickerThumbs } from "./faceStickers";
 
 // Orientation detection using Screen Orientation API (with fallback)
 function useLandscape() {
@@ -58,6 +59,17 @@ export default function CameraSetup({ layout, onBack, onDone }) {
   const [facingMode, setFacingMode] = useState("user");
   const [numberOfCameras, setNumberOfCameras] = useState(0);
 
+  // live face stickers
+  const camBoxRef = useRef(null);      // the camera container (same box react-camera-pro crops to)
+  const overlayRef = useRef(null);     // preview canvas over the video
+  const facesRef = useRef([]);         // latest face landmarks
+  const stickerRef = useRef("none");
+  const compositeRef = useRef(null);   // { canvas, ctx } while recording a GIF with stickers
+  const [sticker, setSticker] = useState("none");
+  const [stickerStatus, setStickerStatus] = useState("idle"); // idle | loading | ready | error
+  const thumbs = stickerThumbs();
+  stickerRef.current = sticker;
+
   const isLandscape = useLandscape();
   const isMobile = useIsMobile();
 
@@ -74,6 +86,66 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     return () => window.removeEventListener('resize', updateCameraSize);
   }, []);
 
+  // Face tracking + sticker preview loop (only runs while a sticker is picked)
+  useEffect(() => {
+    const overlay = overlayRef.current;
+    const clear = () => { if (overlay) overlay.getContext("2d").clearRect(0, 0, overlay.width, overlay.height); };
+    if (sticker === "none") { clear(); facesRef.current = []; return; }
+    let alive = true, raf = 0, landmarker = null, lastVideoTime = -1;
+    setStickerStatus((st) => (st === "ready" ? st : "loading"));
+    const tick = () => {
+      if (!alive) return;
+      const video = camBoxRef.current?.querySelector("video");
+      if (landmarker && video && video.readyState >= 2 && video.videoWidth) {
+        const now = performance.now();
+        if (video.currentTime !== lastVideoTime) {
+          lastVideoTime = video.currentTime;
+          try { facesRef.current = landmarker.detectForVideo(video, now).faceLandmarks || []; } catch { /* skip frame */ }
+        }
+        const vw = video.videoWidth, vh = video.videoHeight;
+        // live preview, drawn in the crop the camera box shows
+        const box = camBoxRef.current;
+        if (overlay && box) {
+          const dpr = Math.min(2, window.devicePixelRatio || 1);
+          const cw = Math.round(box.offsetWidth * dpr), ch = Math.round(box.offsetHeight * dpr);
+          if (overlay.width !== cw || overlay.height !== ch) { overlay.width = cw; overlay.height = ch; }
+          const crop = coverCrop(vw, vh, cw, ch);
+          const ctx = overlay.getContext("2d");
+          ctx.clearRect(0, 0, cw, ch);
+          drawFaces(ctx, stickerRef.current, facesRef.current, vw, vh, { sX: crop.sX, sY: crop.sY, k: cw / crop.sW }, now);
+        }
+        // GIF recording with stickers: full raw frame + stickers
+        const comp = compositeRef.current;
+        if (comp) {
+          comp.ctx.drawImage(video, 0, 0, comp.canvas.width, comp.canvas.height);
+          drawFaces(comp.ctx, stickerRef.current, facesRef.current, vw, vh, { sX: 0, sY: 0, k: comp.canvas.width / vw }, now);
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    loadFaceLandmarker()
+      .then((l) => { if (!alive) return; landmarker = l; setStickerStatus("ready"); })
+      .catch((e) => { console.error("face stickers unavailable", e); if (alive) setStickerStatus("error"); });
+    raf = requestAnimationFrame(tick);
+    return () => { alive = false; cancelAnimationFrame(raf); clear(); };
+  }, [sticker]);
+
+  // Bake the stickers into a captured photo (same crop as react-camera-pro's takePhoto)
+  const addStickersToPhoto = async (photo) => {
+    const video = camBoxRef.current?.querySelector("video");
+    const box = camBoxRef.current;
+    if (stickerRef.current === "none" || !facesRef.current.length || !video || !box) return photo;
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = photo; });
+    const c = document.createElement("canvas");
+    c.width = img.width; c.height = img.height;
+    const ctx = c.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    const vw = video.videoWidth, vh = video.videoHeight;
+    const crop = coverCrop(vw, vh, box.offsetWidth, box.offsetHeight);
+    drawFaces(ctx, stickerRef.current, facesRef.current, vw, vh, { sX: crop.sX, sY: crop.sY, k: img.width / crop.sW });
+    return c.toDataURL("image/jpeg", 0.92);
+  };
+
   // Countdown logic
   useEffect(() => {
     if (countdown === null) return;
@@ -85,7 +157,17 @@ export default function CameraSetup({ layout, onBack, onDone }) {
       const video = document.querySelector("video");
       if (video) {
         let chunks = [];
-        const stream = video.captureStream ? video.captureStream() : (video.mozCaptureStream ? video.mozCaptureStream() : null);
+        let stream = video.captureStream ? video.captureStream() : (video.mozCaptureStream ? video.mozCaptureStream() : null);
+        // with a face sticker on, record a canvas that has the stickers drawn in
+        if (stickerRef.current !== "none" && stickerStatus === "ready" && video.videoWidth) {
+          const canvas = document.createElement("canvas");
+          const k = Math.min(1, 640 / video.videoWidth);
+          canvas.width = Math.round(video.videoWidth * k); canvas.height = Math.round(video.videoHeight * k);
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          compositeRef.current = { canvas, ctx };
+          if (canvas.captureStream) stream = canvas.captureStream(24);
+        }
         if (stream) {
           try {
             const recorder = new window.MediaRecorder(stream, { mimeType: "video/webm" });
@@ -93,6 +175,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
               if (e.data.size > 0) chunks.push(e.data);
             };
             recorder.onstop = async () => {
+              compositeRef.current = null;
               // Create GIF from video
               const videoBlob = new Blob(chunks, { type: "video/webm" });
               const url = URL.createObjectURL(videoBlob);
@@ -131,9 +214,10 @@ export default function CameraSetup({ layout, onBack, onDone }) {
       }
     }
     if (countdown === 0) {
-      setTimeout(() => {
+      setTimeout(async () => {
         if (cameraRef.current) {
-          const photo = cameraRef.current.takePhoto();
+          let photo = cameraRef.current.takePhoto();
+          try { photo = await addStickersToPhoto(photo); } catch { /* keep the plain photo */ }
           setCaptured((prev) => [...prev, { photo, gif: null }]);
           if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
             mediaRecorderRef.current.stop();
@@ -150,6 +234,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     }
     const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [countdown, shots, isMobile, isLandscape, captured.length]);
 
   // Reset session
@@ -280,6 +365,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
           {/* Camera Container */}
           <div className="mb-3 md:mb-6 flex justify-center w-full">
             <div 
+              ref={camBoxRef}
               style={cameraContainerStyle}
               className="shadow-inner bg-black ring-4 ring-white ring-opacity-60 rounded-xl overflow-hidden relative"
             >
@@ -296,6 +382,13 @@ export default function CameraSetup({ layout, onBack, onDone }) {
                 }}
               />
               
+              {/* Face sticker preview (mirrored like the video for the front camera) */}
+              <canvas
+                ref={overlayRef}
+                className="pointer-events-none absolute inset-0 z-[5] h-full w-full"
+                style={{ transform: facingMode === "user" ? "rotateY(180deg)" : "none" }}
+              />
+
               {/* Viewfinder brackets */}
               {step !== "start" && step !== "done" && (
                  <div className="absolute inset-4 md:inset-8 pointer-events-none z-10 opacity-70">
@@ -331,6 +424,36 @@ export default function CameraSetup({ layout, onBack, onDone }) {
               )}
             </div>
           </div>
+
+          {/* Face sticker picker */}
+          {step !== "done" && (
+            <div className="mb-4 w-full max-w-xl md:mb-6">
+              <div className="mb-1.5 flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-pink-500/90">
+                <span>face charms</span>
+                {sticker !== "none" && stickerStatus === "loading" && <span className="normal-case tracking-normal text-pink-400">· waking up the magic…</span>}
+                {sticker !== "none" && stickerStatus === "error" && <span className="normal-case tracking-normal text-rose-500">· couldn't load (offline?)</span>}
+              </div>
+              <div className="studio-scroll flex justify-start gap-2.5 overflow-x-auto px-2 pb-1 sm:justify-center">
+                {STICKERS.map((st) => (
+                  <button
+                    key={st.id}
+                    onClick={() => setSticker(st.id)}
+                    disabled={step === "countdown"}
+                    className={`facecharm ${sticker === st.id ? "is-on" : ""}`}
+                    aria-label={`${st.name} face charm`}
+                    title={st.name}
+                  >
+                    {st.id === "none" ? (
+                      <span className="text-lg text-pink-400">⌀</span>
+                    ) : (
+                      <img src={thumbs[st.id]} alt="" draggable={false} />
+                    )}
+                    {sticker === st.id && st.id !== "none" && stickerStatus === "loading" && <span className="facecharm-spin" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Start Photo Session button */}
           {step === "start" && (
