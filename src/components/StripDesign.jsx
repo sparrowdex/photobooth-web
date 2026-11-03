@@ -53,6 +53,10 @@ const downloadFile = async (data, filename, onResult) => {
   if (onResult) onResult({ ...result, data, filename });
 };
 
+// true when two fit results are the same (avoids re-render / resize loops)
+const sameFit = (a, b) =>
+  a === b || (!!a && !!b && a.desk === b.desk && a.scale === b.scale && a.w === b.w && a.h === b.h && a.top === b.top && a.avail === b.avail);
+
 export default function StripDesign({ images, designs, onBack, captured = [] }) {
   const [step, setStep] = useState("mood"); // studio tab: mood | frame | save
   const [filterTarget, setFilterTarget] = useState("all"); // which photo(s) filters apply to
@@ -456,14 +460,16 @@ export default function StripDesign({ images, designs, onBack, captured = [] }) 
       if (!mq.matches) {
         // widescreen: shrink tall strips so they fit the window height
         const scale = Math.min(1, (window.innerHeight - 72) / inner.offsetHeight);
-        setMobileFit(scale < 1 ? { desk: true, scale, w: inner.offsetWidth, h: inner.offsetHeight } : null);
+        const next = scale < 1 ? { desk: true, scale: Math.round(scale * 1000) / 1000, w: inner.offsetWidth, h: inner.offsetHeight } : null;
+        setMobileFit((prev) => (sameFit(prev, next) ? prev : next));
         return;
       }
       const top = topRef.current?.offsetHeight || 0;
       const avail = window.innerHeight - top - (sheetRef.current?.offsetHeight || 0);
       // let the strip grow past its desktop size on phones, but never overflow the space
       const scale = Math.min(1.6, (avail - 24) / inner.offsetHeight, (window.innerWidth - 28) / inner.offsetWidth);
-      setMobileFit({ top, avail, scale: Math.max(0.2, scale) });
+      const next = { top, avail, scale: Math.round(Math.max(0.2, scale) * 1000) / 1000 };
+      setMobileFit((prev) => (sameFit(prev, next) ? prev : next));
     };
     update();
     const ro = new ResizeObserver(update);
@@ -544,7 +550,7 @@ export default function StripDesign({ images, designs, onBack, captured = [] }) 
       >
         <div
           ref={stripInnerRef}
-          className="relative"
+          className={`relative ${mobileFit?.desk ? "w-max" : ""}`}
           style={mobileFit ? { transform: `scale(${mobileFit.scale})`, transformOrigin: mobileFit.desk ? "top left" : "center", transition: "transform .5s cubic-bezier(.2,.9,.3,1)" } : undefined}
         >
           {movingPreview && (
