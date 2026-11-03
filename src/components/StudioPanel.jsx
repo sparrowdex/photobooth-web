@@ -4,7 +4,7 @@
 //  • phones: an editor layout — slim top bar (retake · title · save), the strip as the hero,
 //    and a compact glass dock at the bottom with one row of tools + a tab bar.
 import { useEffect, useRef, useState } from "react";
-import { FILTERS } from "./filters";
+import { FILTERS, FILTER_GROUPS } from "./filters";
 import frameMappings from "./frameMappings";
 import LicenseForm from "./LicenseForm";
 
@@ -64,6 +64,7 @@ const isTallLayout = (designs) => {
 
 /* ── mood: filter swatches made from your own photo ───────────────── */
 function MoodTab({ images, photoFilters, setPhotoFilters, target, setTarget, compact }) {
+  const [group, setGroup] = useState(FILTER_GROUPS[0].id);
   const targets = target === "all" ? images.map((_, i) => i) : [target];
   const preview = images[target === "all" ? 0 : target];
 
@@ -113,7 +114,7 @@ function MoodTab({ images, photoFilters, setPhotoFilters, target, setTarget, com
     </div>
   );
 
-  const swatches = FILTERS.map((filter) => {
+  const swatch = (filter) => {
     const layer = layerOf(filter);
     const active = filter.name === "None" ? noneActive : layer !== null;
     return (
@@ -127,14 +128,27 @@ function MoodTab({ images, photoFilters, setPhotoFilters, target, setTarget, com
         </span>
       </button>
     );
-  });
+  };
+  const none = FILTERS.find((f) => f.name === "None");
+  const inGroup = (g) => FILTERS.filter((f) => f.group === g);
+  // which sections have something applied (dot on the chip)
+  const groupUsed = (g) => inGroup(g).some((f) => layerOf(f) !== null);
 
   if (compact) {
     return (
       <div>
         {targetPicker}
-        <div className="studio-scroll -mx-4 grid snap-x auto-cols-[58px] grid-flow-col gap-x-2.5 overflow-x-auto px-4 pt-1.5 pb-1">
-          {swatches}
+        <div className="studio-scroll -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-2">
+          {FILTER_GROUPS.map((g) => (
+            <button key={g.id} onClick={() => setGroup(g.id)} className={`studio-chip relative !px-3 !py-1 !text-[11px] ${group === g.id ? "is-on" : ""}`}>
+              {g.label}
+              {groupUsed(g.id) && group !== g.id && <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-pink-500 ring-2 ring-white" />}
+            </button>
+          ))}
+        </div>
+        <div key={group} className="studio-scroll studio-body -mx-4 grid snap-x auto-cols-[58px] grid-flow-col gap-x-2.5 overflow-x-auto px-4 pt-1.5 pb-1">
+          {swatch(none)}
+          {inGroup(group).map(swatch)}
         </div>
       </div>
     );
@@ -152,7 +166,13 @@ function MoodTab({ images, photoFilters, setPhotoFilters, target, setTarget, com
         <Eyebrow>pick a mood</Eyebrow>
         <span className="text-[10px] text-pink-300">{stacked > 1 ? `${stacked} layered` : "tap more than one to layer"}</span>
       </div>
-      <div className="grid grid-cols-5 gap-x-3 gap-y-4 lg:grid-cols-6">{swatches}</div>
+      <div className="grid grid-cols-5 gap-x-3 gap-y-4 lg:grid-cols-6">{swatch(none)}</div>
+      {FILTER_GROUPS.map((g) => (
+        <div key={g.id} className="mt-5">
+          <Eyebrow className="!text-pink-300">{g.label}{g.id === "texture" ? " · layer on top of any look" : ""}</Eyebrow>
+          <div className="grid grid-cols-5 gap-x-3 gap-y-4 lg:grid-cols-6">{inGroup(g.id).map(swatch)}</div>
+        </div>
+      ))}
     </div>
   );
 }
