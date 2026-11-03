@@ -507,6 +507,9 @@ export default function StripDesign({ images, designs, onBack, captured = [] }) 
     ? "url('./images/customize_bg.webp')"
     : "url('./images/strip_design_wide.webp')";
 
+  // When saving as a GIF, preview the strip with the GIFs playing in the frame
+  const movingPreview = downloadType.startsWith("gif") && captured.some((c) => c.gif);
+
   // Normal strip design UI
   const mainContainerStyle = {
     position: 'relative',
@@ -541,10 +544,14 @@ export default function StripDesign({ images, designs, onBack, captured = [] }) 
       >
         <div
           ref={stripInnerRef}
+          className="relative"
           style={mobileFit ? { transform: `scale(${mobileFit.scale})`, transformOrigin: mobileFit.desk ? "top left" : "center", transition: "transform .5s cubic-bezier(.2,.9,.3,1)" } : undefined}
         >
+          {movingPreview && (
+            <span className="strip-moving-tag"><span className="booth-live-dot" /> moving preview</span>
+          )}
           <PhotoLayoutCard
-            images={images}
+            images={movingPreview ? captured.map((c, i) => c.gif || images[i]) : images}
             filters={cssFilters}
             selectedDesign={selectedDesign}
             transparentCard={true}

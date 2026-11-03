@@ -67,6 +67,7 @@ export default function CameraSetup({ layout, onBack, onDone }) {
   const [sticker, setSticker] = useState("none");
   const [timerSec, setTimerSec] = useState(3);
   const [flash, setFlash] = useState(false);
+  const [viewShot, setViewShot] = useState(null); // index of the shot open in the viewer
   const [soundOn, setSoundOn] = useState(() => { try { return localStorage.getItem("photobooth.sound") !== "off"; } catch { return true; } });
   const soundRef = useRef(soundOn);
   soundRef.current = soundOn;
@@ -288,6 +289,17 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     setCountdown(null);
   };
 
+  useEffect(() => {
+    if (viewShot === null) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setViewShot(null);
+      if (e.key === "ArrowRight") setViewShot((i) => (i + 1) % captured.length);
+      if (e.key === "ArrowLeft") setViewShot((i) => (i - 1 + captured.length) % captured.length);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [viewShot, captured.length]);
+
   // Shutter: start the timer for the next shot
   const handleStartCountdown = () => {
     if (soundRef.current) unlockSound();
@@ -315,10 +327,17 @@ export default function CameraSetup({ layout, onBack, onDone }) {
     >
       {Array.from({ length: shots }).map((_, i) =>
         captured[i] ? (
-          <span key={i} className="booth-print" style={{ transform: `rotate(${(i % 2 ? 1 : -1) * (2 + (i % 3))}deg)` }}>
+          <button
+            key={i}
+            className="booth-print is-filled"
+            style={{ transform: `rotate(${(i % 2 ? 1 : -1) * (2 + (i % 3))}deg)` }}
+            onClick={() => setViewShot(i)}
+            disabled={step === "countdown"}
+            aria-label={`View shot ${i + 1}`}
+          >
             <img src={captured[i].gif || captured[i].photo} data-photo={captured[i].photo} alt={`Shot ${i + 1}`} />
             <span className="booth-print-tag">{captured[i].gif ? "gif" : "…"}</span>
-          </span>
+          </button>
         ) : (
           <span key={i} className="booth-print is-empty">{i + 1}</span>
         )
@@ -373,6 +392,47 @@ export default function CameraSetup({ layout, onBack, onDone }) {
               <li>✨ Tip: layer looks on top of <b>Soft Focus</b> for extra-smooth skin.</li>
             </ul>
             <button className="studio-save mt-5 w-full" onClick={() => setShowInstructions(false)}>got it ♡</button>
+          </div>
+        </div>
+      )}
+
+      {/* Shot viewer: the photo and its moving version side by side */}
+      {viewShot !== null && captured[viewShot] && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 md:p-6" role="dialog" aria-label={`Shot ${viewShot + 1}`}>
+          <button className="studio-backdrop absolute inset-0" onClick={() => setViewShot(null)} aria-label="Close" />
+          <div className="studio-panel studio-sheet-in relative w-full max-w-4xl rounded-[28px] p-4 md:p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-pacifico text-2xl text-pink-500">shot {viewShot + 1}<span className="text-base text-pink-300"> of {captured.length}</span></h2>
+              <button className="studio-iconbtn" onClick={() => setViewShot(null)} aria-label="Close viewer">✕</button>
+            </div>
+            <div className="grid grid-cols-2 gap-3 md:gap-5">
+              {[
+                { label: "photo", src: captured[viewShot].photo },
+                { label: "moving", src: captured[viewShot].gif },
+              ].map((v) => (
+                <figure key={v.label} className="flex flex-col items-center gap-2">
+                  <div className="shotview-frame">
+                    {v.src ? (
+                      <img src={v.src} alt={`Shot ${viewShot + 1} ${v.label}`} />
+                    ) : (
+                      <span className="flex items-center gap-2 text-sm font-semibold text-pink-500"><span className="studio-spinner !border-pink-200 !border-t-pink-500" /> developing gif…</span>
+                    )}
+                  </div>
+                  <figcaption className="shotview-label">{v.label === "moving" ? "▶ moving" : "◼ photo"}</figcaption>
+                </figure>
+              ))}
+            </div>
+            {captured.length > 1 && (
+              <div className="mt-4 flex items-center justify-center gap-3">
+                <button className="booth-pill" onClick={() => setViewShot((i) => (i - 1 + captured.length) % captured.length)} aria-label="Previous shot">←</button>
+                <div className="flex gap-1.5">
+                  {captured.map((_, i) => (
+                    <button key={i} onClick={() => setViewShot(i)} className={`h-2.5 w-2.5 rounded-sm transition ${i === viewShot ? "bg-pink-500" : "bg-pink-200 hover:bg-pink-300"}`} aria-label={`Shot ${i + 1}`} />
+                  ))}
+                </div>
+                <button className="booth-pill" onClick={() => setViewShot((i) => (i + 1) % captured.length)} aria-label="Next shot">→</button>
+              </div>
+            )}
           </div>
         </div>
       )}
