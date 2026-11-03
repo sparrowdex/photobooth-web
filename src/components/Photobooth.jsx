@@ -5,7 +5,6 @@ import AppLayout from "./AppLayout";
 import StripDesign from "./StripDesign";
 import BackButton from "./BackButton";
 import NextButton from "./NextButton";
-import { useTheme } from "./ThemeContext";
 
 // Example overlays for each layout (replace with your own PNG/SVG overlays)
 //3 images do not fit the card, need to specify the two overlay per row thing, and as no of designs increases so does pagination 
@@ -59,24 +58,10 @@ const designOverlaysByLayout = {
 
 
 export default function Photobooth({ onBack }) {
-  const { colors } = useTheme();
   const [layout, setLayout] = useState(null);
   const [showCamera, setShowCamera] = useState(false);
   const [capturedImages, setCapturedImages] = useState(null);
   const [showStripDesign, setShowStripDesign] = useState(false);
-  const [showLetterOverlay, setShowLetterOverlay] = useState(false);
-  const [selectedDesign, setSelectedDesign] = useState(null);
-
-  // Download handler for photo strip
-  const handleDownload = (dataUrl, filename = "photobooth-strip.png") => {
-    const link = document.createElement("a");
-    link.href = dataUrl;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   // Get overlays for the current layout (by shots or id)
   const designOverlays =
     layout && designOverlaysByLayout[layout.shots]
@@ -116,53 +101,19 @@ export default function Photobooth({ onBack }) {
     );
   }
 
-  // Step 3: Strip Design Selection
+  // Step 3: Customise + save the strip
   if (showStripDesign && capturedImages) {
-    // For 1-shot layout, show the letter overlay after strip creation
-    if (layout.shots === 1 && showLetterOverlay) {
-      return (
-        <AppLayout>
-          <StripDesign
-            images={capturedImages.map(c => c.photo)}
-            captured={capturedImages}
-            designs={designOverlays}
-            selectedDesign={selectedDesign}
-            onSelectDesign={setSelectedDesign}
-            onBack={() => {
-              setShowStripDesign(false);
-              setCapturedImages(null);
-              setShowCamera(true);
-            }}
-            onNext={() => {
-              setShowLetterOverlay(true);
-            }}
-            onDownload={handleDownload}
-            showLetterOverlay={true}
-            setShowLetterOverlay={setShowLetterOverlay}
-          />
-        </AppLayout>
-      );
-    }
-    // For other layouts, normal flow
     return (
       <AppLayout>
         <StripDesign
           images={capturedImages.map(c => c.photo)}
           captured={capturedImages}
           designs={designOverlays}
-          selectedDesign={selectedDesign}
-          onSelectDesign={setSelectedDesign}
           onBack={() => {
             setShowStripDesign(false);
             setCapturedImages(null);
             setShowCamera(true);
           }}
-          onNext={() => {
-            alert("You chose a design! Implement the next step here.");
-          }}
-          onDownload={handleDownload}
-          showLetterOverlay={showLetterOverlay}
-          setShowLetterOverlay={setShowLetterOverlay}
         />
       </AppLayout>
     );
